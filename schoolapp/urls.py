@@ -26,7 +26,8 @@ router = routers.DefaultRouter()
 
 urlpatterns = patterns('',
     url(r'^', include(router.urls)),
-    url(r'^api/v1/account/signup', views.UserSignUp.as_view()),
+    url(r'^api/v1/account/signup', views.AccountSignUp.as_view()),
+    url(r'^api/v1/account/login', views.AccountLogin.as_view()),
 
     url(r'^api-auth/', include('rest_framework.urls', namespace='rest_framework')),
 
