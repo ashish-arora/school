@@ -1,0 +1,15 @@
+PyYAML==3.11
+pymongo==2.8
+django-rest-swagger==0.2.9
+django-filter==0.9.2
+djangorestframework==3.0.4
+Markdown==2.5.2
+mongoengine==0.8.7
+django-rest-framework-mongoengine==2.0.2
+requests==2.5.0
+statsd==1.0.0
+kazoo==2.0b1
+gevent==1.0.1
+greenlet==0.4.6
+gunicorn==19.3.0
+python-gcm==0.2
