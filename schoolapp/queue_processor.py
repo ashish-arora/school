@@ -10,8 +10,10 @@ import socket
 import gevent
 from gevent import monkey, greenlet
 from django.core.cache import cache
-from school.settings import NOTIFICATION_QUEUE
+from school.settings import NOTIFICATION_QUEUE,GCM_APIKEY,GCM_PROJECT_ID,GCM_QUEUE
 from schoolapp.utils.jabber_client import JabberClient
+from gcm.gcm import GCM
+from models import User
 
 monkey.patch_all()
 
@@ -34,8 +36,10 @@ signal.signal(signal.SIGTERM, shutdown)
 class QueueProcessor():
     @staticmethod
     def process(queue, data):
-        if queue == 'notification':
+        if queue == NOTIFICATION_QUEUE:
             SendNotification.perform(data)
+        elif queue == GCM_QUEUE:
+            GcmPush.perform(data)
         else:
             logging.error('invalid request: ' + queue + '   ' + data)
 
@@ -114,6 +118,27 @@ class SendNotification(object):
         message = SendNotification.compose_message(student_name)
         JabberClient().send_message(parent_id, message)
         logging.debug("Message has been sent to parent_id: %s" % parent_id)
+
+class Gcm_push(object):
+    queue = GCM_QUEUE
+    # Plaintext request
+    @staticmethod
+    def perform(data):
+        gcm = GCM(GCM_APIKEY)
+        msisdn = data.get('msisdn')
+        user = None
+        try:
+            user=User.objects.get(msisdn)
+        except Exception as e:
+            logging.exception("GCM push send failed to this msisdn : %s", msisdn)
+            return
+        if(user.devices and len(user.devices) > 0):
+            devices = user.devices
+        reg_id = devices.get('dev_token', None)
+        if reg_id and data['message']:
+            gcm.plaintext_request(registration_id=reg_id, data=data['message'])
+
+
 
 if __name__ == '__main__':
     queues = {NOTIFICATION_QUEUE: 5}

@@ -38,6 +38,7 @@ INSTALLED_APPS = (
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'schoolapp',
+    'gcm',
 )
 
 MIDDLEWARE_CLASSES = (
@@ -126,3 +127,9 @@ ADMIN_JID=''
 JABBER_SERVER='127.0.0.1'
 ADMIN_JABBER_PASSWORD=''
 JABBER_PORT=5222
+
+#### PNS ########
+#TODO: Register with Google Cloud Messaging from GOOGLE API Console
+GCM_QUEUE = "gcm_queue"
+GCM_APIKEY = "<api_key>"
+GCM_PROJECT_ID = "<gcm_project_id>"
