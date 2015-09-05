@@ -141,7 +141,7 @@ class Gcm_push(object):
 
 
 if __name__ == '__main__':
-    queues = {NOTIFICATION_QUEUE: 5}
+    queues = {NOTIFICATION_QUEUE: 5, GCM_QUEUE: 5}
     if len(sys.argv) > 1:
         obj = sys.argv[1]
         queues = json.loads(obj)
