@@ -13,6 +13,8 @@ VALID_TYPES = [ADMIN, TEACHER, STUDENT, PARENT]
 
 VALID_COUNTRY = ['+91']
 
+VALID_ATTENDANCE_TYPES = [PRESENT, ABSENT]
+
 class User(Document):
     name = StringField(max_length=40)
     msisdn = ListField()
@@ -21,7 +23,7 @@ class User(Document):
     token = StringField(max_length=20)
     type= IntField(required=True)
     organization = StringField(max_length=20)
-    parent_id = ObjectIdField(required=True)
+    parent_id = ListField(required=True)
     md = DictField(default={})
     groups = ListField(ReferenceField(Group))
     ts = IntField(default=int(time.time()))

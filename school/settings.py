@@ -69,6 +69,18 @@ TEMPLATES = [
     },
 ]
 
+CACHES = {
+    'default': {
+        'BACKEND': 'redis_cache.RedisCache',
+        'LOCATION': 'localhost:6379',
+        'OPTIONS': {
+            'DB': 1,
+            'PASSWORD': '',
+            'PARSER_CLASS': 'redis.connection.HiredisParser'
+        },
+    },
+}
+
 WSGI_APPLICATION = 'school.wsgi.application'
 
 
@@ -104,3 +116,13 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/1.8/howto/static-files/
 
 STATIC_URL = '/static/'
+
+####### Queues ########
+NOTIFICATION_QUEUE = 'notification'
+
+
+###### JABBER SETTINGS ##########
+ADMIN_JID=''
+JABBER_SERVER='127.0.0.1'
+ADMIN_JABBER_PASSWORD=''
+JABBER_PORT=5222

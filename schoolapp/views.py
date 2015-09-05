@@ -3,21 +3,25 @@ from .models import User
 from rest_framework import status
 from rest_framework.exceptions import ValidationError, AuthenticationFailed, ParseError
 from rest_framework.exceptions import APIException
-from schoolapp.helpers.json_response import JSONResponse
+from schoolapp.utils.json_response import JSONResponse
 from rest_framework.views import APIView
 import time, traceback, json
-from helpers import utils
+from utils import log
 from mongoengine.errors import NotUniqueError
 from mongoengine.errors import DoesNotExist
 import base64, os
 from models import User, Organization, Group
 # Create your views here.
-logger = utils.Logger.get_logger(__file__)
-from models import VALID_TYPES, VALID_COUNTRY
+from models import VALID_TYPES, VALID_COUNTRY, VALID_ATTENDANCE_TYPES
 from models import ADMIN, TEACHER, STUDENT, PARENT
 from mongoengine.errors import DoesNotExist
 from models import Attendance
 from datetime import datetime, timedelta
+from schoolapp.utils.helpers import authenticate_user
+from utils.helpers import QueueRequests
+from school.settings import NOTIFICATION_QUEUE
+
+logger = log.Logger.get_logger(__file__)
 
 
 class AccountSignUp:
@@ -143,3 +147,54 @@ class AccountLogin:
         except Exception, ex:
             logger.error("Error while getting info: %s" % str(ex))
             return JSONResponse({"stat":"fail", "errorMsg":"Error while getting information"})
+
+class Attendance:
+
+    @authenticate_user
+    def post(self, user):
+        """
+        excepting attendance data in the form of {<student_id>:0/1},<student_id>:0/1,... } and group id
+        """
+
+        try:
+            attendance_data = self.request.data.get('attendance_data')
+            group_id = self.request.data.get('group_id')
+        except Exception, ex:
+            logger.error("Error: %s" %(str(ex)))
+            raise ValidationError("Required parameter was not there")
+
+        try:
+            attendance_data = json.loads(attendance_data)
+        except Exception, ex:
+            raise ParseError("Invalid json data: %s" % attendance_data)
+
+        try:
+            group = Group.objects.get(id=group_id)
+        except DoesNotExist:
+            raise ValidationError("Group Id is invalid: %s" % group_id)
+        attendance_objs = []
+        absent_student_ids=[]
+        for student_id, is_present in attendance_data.items():
+            try:
+                parent_ids = json.load(parent_ids)
+            except Exception, ex:
+                raise ParseError("Invalid parent json data: %s" % parent_ids)
+
+            if is_present not in VALID_ATTENDANCE_TYPES:
+                raise ValidationError("Invalid attendance type : %s " %(attendance_data))
+            try:
+                student = User.objects.get(id=student_id)
+            except DoesNotExist, ex:
+                raise DoesNotExist("Studen id does not exist: %s" % student_id)
+
+            attendance_objs.append(Attendance(student=student, present=int(is_present)))
+
+            for parent_id in student.parent_ids:
+                QueueRequests.enqueue(NOTIFICATION_QUEUE, {'id': parent_id, 'name': student.name})
+
+        try:
+            Attendance.objects.insert(attendance_objs)
+        except Exception, ex:
+            logger.error("Error occurred while saving the attendance doc: %s, data: %s, group_id:%s" % (str(ex), attendance_data, group_id))
+            raise APIException("Error while saving data")
+        return JSONResponse({"stat": "ok"})
