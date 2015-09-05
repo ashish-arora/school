@@ -25,7 +25,7 @@ class User(Document):
     organization = StringField(max_length=20)
     parent_id = ListField(required=True)
     md = DictField(default={})
-    groups = ListField(ReferenceField(Group))
+    groups = ListField(ReferenceField('Group'))
     ts = IntField(default=int(time.time()))
 
     meta = {
@@ -39,7 +39,7 @@ class Organization(Document):
     city = StringField(max_length=20)
     state = StringField(max_length=20)
     country = StringField()
-    Address = StringField(max_length=50)
+    address = StringField(max_length=50)
 
 class StudentInfo(Document):
     student = ReferenceField(User)

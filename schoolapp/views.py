@@ -20,14 +20,56 @@ from datetime import datetime, timedelta
 from schoolapp.utils.helpers import authenticate_user
 from utils.helpers import QueueRequests
 from school.settings import NOTIFICATION_QUEUE
+from rest_framework.views import APIView
+from schoolapp.serializers import GroupSerializer, UserSerializer, OrganizationSerializer
+from schoolapp.serializers import AttendanceSerializer
+import bson, base64
+BASE64_URLSAFE="-_"
 
 logger = log.Logger.get_logger(__file__)
 
 
-class AccountSignUp:
+class AccountSignUp(APIView):
 
     def post(self, request):
+        """
+        Account Sign Up
+
+        ---
+        # YAML (must be separated by `---`)
+
+        type:
+            name:
+                required: true
+                type: string
+            msisdn:
+                required: true
+                type: string
+            type:
+                required: true
+                type: integer
+            organization_id:
+                required: true
+                type: string
+            group_id:
+                required: true
+                type: string
+
+        serializer: UserSerializer
+        omit_serializer: false
+
+        parameters_strategy: merge
+        omit_parameters:
+            - path
+
+        responseMessages:
+            - code: 200
+              message: Successfully Signed up
+            - code: 400
+              message: Bad Request
+        """
         try:
+            #import ipdb; ipdb.set_trace()
             name = request.data.get('name')
             msisdn = request.data.get('msisdn')
             type = request.data.get('type')
@@ -74,7 +116,7 @@ class AccountSignUp:
             logger.debug("Successfully signed up for msisdn: %s" %(msisdn))
             return JSONResponse({"stat":"ok", "token":token})
 
-class AccountLogin:
+class AccountLogin(APIView):
 
     def show_attendance(self, user):
         #get the student from the parent, make sure the student has been registered already
@@ -108,7 +150,44 @@ class AccountLogin:
                 result_dict[group.name].update({student_info_obj.student.name : student_info_obj.roll_no})
         return result_dict
 
-    def get(self, request):
+    def post(self, request):
+        """
+        Account Login
+
+        ---
+        # YAML (must be separated by `---`)
+
+        type:
+            token:
+                required: true
+                type: string
+            msisdn:
+                required: true
+                type: string
+            type:
+                required: true
+                type: integer
+            devices:
+                required: true
+                type: string
+            country:
+                required: true
+                type: string
+
+
+        serializer: UserSerializer
+        omit_serializer: false
+
+        parameters_strategy: merge
+        omit_parameters:
+            - path
+
+        responseMessages:
+            - code: 200
+              message: Successfully Logged in
+            - code: 400
+              message: Bad Request
+        """
         try:
             msisdn = request.data.get('msisdn')
             token = request.data.get('token')
@@ -148,17 +227,40 @@ class AccountLogin:
             logger.error("Error while getting info: %s" % str(ex))
             return JSONResponse({"stat":"fail", "errorMsg":"Error while getting information"})
 
-class Attendance:
+class Attendance(APIView):
 
-    @authenticate_user
-    def post(self, user):
+    #@authenticate_user
+    def post(self, request):
         """
-        excepting attendance data in the form of {<student_id>:0/1},<student_id>:0/1,... } and group id
-        """
+        Do Attendance
 
+        ---
+        # YAML (must be separated by `---`)
+
+        type:
+            attendance_data:
+                required: true
+                type: string
+            group_id:
+                required: true
+                type: string
+
+        serializer: AttendanceSerializer
+        omit_serializer: false
+
+        parameters_strategy: merge
+        omit_parameters:
+            - path
+
+        responseMessages:
+            - code: 200
+              message: Successfully Signed up
+            - code: 400
+              message: Bad Request
+        """
         try:
-            attendance_data = self.request.data.get('attendance_data')
-            group_id = self.request.data.get('group_id')
+            attendance_data = request.data.get('attendance_data')
+            group_id = request.data.get('group_id')
         except Exception, ex:
             logger.error("Error: %s" %(str(ex)))
             raise ValidationError("Required parameter was not there")
@@ -173,19 +275,14 @@ class Attendance:
         except DoesNotExist:
             raise ValidationError("Group Id is invalid: %s" % group_id)
         attendance_objs = []
-        absent_student_ids=[]
         for student_id, is_present in attendance_data.items():
-            try:
-                parent_ids = json.load(parent_ids)
-            except Exception, ex:
-                raise ParseError("Invalid parent json data: %s" % parent_ids)
 
             if is_present not in VALID_ATTENDANCE_TYPES:
                 raise ValidationError("Invalid attendance type : %s " %(attendance_data))
             try:
                 student = User.objects.get(id=student_id)
             except DoesNotExist, ex:
-                raise DoesNotExist("Studen id does not exist: %s" % student_id)
+                raise DoesNotExist("Student id does not exist: %s" % student_id)
 
             attendance_objs.append(Attendance(student=student, present=int(is_present)))
 
@@ -198,3 +295,117 @@ class Attendance:
             logger.error("Error occurred while saving the attendance doc: %s, data: %s, group_id:%s" % (str(ex), attendance_data, group_id))
             raise APIException("Error while saving data")
         return JSONResponse({"stat": "ok"})
+
+
+class GroupView(APIView):
+
+    #@authenticate_user
+    def post(self, request):
+        """
+        Create Group
+
+        ---
+        # YAML (must be separated by `---`)
+
+        type:
+            name:
+                required: true
+                type: string
+            organization_id:
+                required: true
+                type: string
+
+        serializer: GroupSerializer
+        omit_serializer: false
+
+        parameters_strategy: merge
+        omit_parameters:
+            - path
+
+        responseMessages:
+            - code: 200
+              message: Successfully Created the Group
+            - code: 400
+              message: Bad Request
+        """
+        try:
+            name = request.data.get('name')
+            organization_id = request.data.get('organization_id')
+        except Exception, ex:
+            logger.error("Error: %s" %(str(ex)))
+            raise ValidationError("Required parameter was not there")
+
+        try:
+            organization_id = str(bson.ObjectId(base64.b64decode(organization_id, BASE64_URLSAFE)))
+            organization = Organization.objects.get(id=organization_id)
+        except DoesNotExist:
+            raise ValidationError("Organization Id is invalid: %s" % organization_id)
+
+        try:
+            group = Group.objects.create(name=name, organization=organization)
+        except Exception, ex:
+            logger.error("Error occurred while creating group: %s, name: %s, organization_id:%s" % (str(ex), name, organization_id))
+            raise APIException("Error while saving data")
+        else:
+            group_id = base64.b64encode(group.id.binary, BASE64_URLSAFE)
+            return JSONResponse({"stat": "ok", "group_id": group_id})
+
+class OrganizationView(APIView):
+
+    #@authenticate_user
+    def post(self, request):
+        """
+        Create Organization
+
+        ---
+        # YAML (must be separated by `---`)
+
+        type:
+            name:
+                required: true
+                type: string
+            city:
+                required: true
+                type: string
+            state:
+                required: true
+                type: string
+            country:
+                required: true
+                type: string
+            address:
+                required: true
+                type: string
+
+        serializer: OrganizationSerializer
+        omit_serializer: false
+
+        parameters_strategy: merge
+        omit_parameters:
+            - path
+
+        responseMessages:
+            - code: 200
+              message: Successfully Created the Organization
+            - code: 400
+              message: Bad Request
+        """
+        try:
+            name = request.data.get('name')
+            country = request.data.get('country')
+            city = request.data.get('city')
+            state = request.data.get('state')
+            address = request.data.get('address')
+        except Exception, ex:
+            logger.error("Error: %s" %(str(ex)))
+            raise ValidationError("Required parameter was not there")
+
+        try:
+            organization = Organization.objects.create(name=name, country=country, city=city, state=state, address=address)
+        except Exception, ex:
+            logger.error("Error occurred while creating organization doc: %s, name: %s, country:%s, city: %s, state:%s, address:%s " % (str(ex), name, country, city, state, address))
+            raise APIException("Error while saving data")
+        else:
+            organization_id = base64.b64encode(organization.id.binary, BASE64_URLSAFE)
+        return JSONResponse({"stat": "ok", "organization_id":organization_id})
+
