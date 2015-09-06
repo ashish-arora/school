@@ -119,7 +119,7 @@ class SendNotification(object):
         JabberClient().send_message(parent_id, message)
         logging.debug("Message has been sent to parent_id: %s" % parent_id)
 
-class Gcm_push(object):
+class GcmPush(object):
     queue = GCM_QUEUE
     # Plaintext request
     @staticmethod
