@@ -21,13 +21,13 @@ stop(Host) ->
 on_presence(_User, _Server, _Resource, _Packet) ->
     ?INFO_MSG("mod_sunshine on presence called by User : ~p", [_User]),
     ?INFO_MSG("mod_sunshine on presence called with resource : ~p", [_Resource]),
-    OsReturn = os:cmd("/usr/bin/python /srv/Kevent/apps/manage.py on_jabber_logout " ++ "presence " ++ _User ++ " " ++ _Resource),
+    OsReturn = os:cmd("/usr/bin/python /opt/local/share/school/manage.py manage_users_presence " ++ "1" ++ _User ++ " " ++ _Resource),
     ?INFO_MSG("Send to handler and got return ~s", [OsReturn]),
     none.
 
 on_unset(_User, _Server, _Resource, _Packet) ->
     ?INFO_MSG("mod_sunshine on unset called by User : ~p", [_User]),
     ?INFO_MSG("mod_sunshine on unset called with resource : ~p", [_Resource]),
-    OsReturn = os:cmd("/usr/bin/python /srv/Kevent/apps/manage.py on_jabber_logout " ++ "unset " ++ _User ++ " " ++ _Resource),
+    OsReturn = os:cmd("/usr/bin/python /opt/local/share/manage.py manage_users_presence " ++ "0" ++ _User ++ " " ++ _Resource),
     ?INFO_MSG("Send to handler and got return ~s", [OsReturn]),
     none.
