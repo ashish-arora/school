@@ -10,7 +10,7 @@ from utils import log
 from mongoengine.errors import NotUniqueError
 from mongoengine.errors import DoesNotExist
 import base64, os
-from models import User, Organization, Group
+from models import User, Organization, Group, Student
 # Create your views here.
 from models import VALID_TYPES, VALID_COUNTRY, VALID_ATTENDANCE_TYPES
 from models import ADMIN, TEACHER, STUDENT, PARENT
@@ -23,8 +23,11 @@ from school.settings import NOTIFICATION_QUEUE
 from rest_framework.views import APIView
 from schoolapp.serializers import GroupSerializer, UserSerializer, OrganizationSerializer
 from schoolapp.serializers import AttendanceSerializer
+from schoolapp.utils.helpers import get_base64_decode, get_base64_encode
+from schoolapp.utils.helpers import create_parent, create_teacher, create_admin, create_student
 import bson, base64
 BASE64_URLSAFE="-_"
+
 
 logger = log.Logger.get_logger(__file__)
 
@@ -34,7 +37,7 @@ class AccountSignUp(APIView):
     def post(self, request):
         """
         Account Sign Up
-
+        You need to give name, msisdn, type:1/2/3/4 (ADMIN/TEACHER/PARENT/STUDENT), organization_id, group_id
         ---
         # YAML (must be separated by `---`)
 
@@ -69,10 +72,11 @@ class AccountSignUp(APIView):
               message: Bad Request
         """
         try:
-            #import ipdb; ipdb.set_trace()
             name = request.data.get('name')
             msisdn = request.data.get('msisdn')
+            roll_no = request.data.get('roll_no', '')
             type = request.data.get('type')
+            parent_data = request.data.get('parent_data', '')
             organization_id = request.data.get('organization_id')
             group_id = request.data.get('group_id')
         except Exception, ex:
@@ -91,49 +95,57 @@ class AccountSignUp(APIView):
             raise ValidationError("Invalid country in msisdn: %s" % msisdn)
 
         try:
-            group_id_list = json.loads(group_id)
+            parent_data = json.loads(parent_data)
         except Exception, ex:
-            raise ValidationError("Invalid group id, cannot parse json")
-
-        groups = Group.objects.filter(_id__in = group_id_list)
-
-        if not len(groups) == len(group_id_list):
-            raise ValidationError("Group Id data is not valid: %s" %(group_id))
+            raise ValidationError("Invalid parent data, cannot parse json")
 
         try:
-            organization_obj = Organization.objects.get(_id= organization_id)
+            group = Group.objects.get(id=get_base64_decode(str(group_id)))
+        except Exception, ex:
+            raise ValidationError("Invalid group id")
+
+        try:
+            organization_obj = Organization.objects.get(id=get_base64_decode(organization_id))
         except DoesNotExist:
             raise ValidationError("Invalid organization id :%s" % organization_id)
 
         token = base64.urlsafe_b64encode(os.urandom(8))
 
-        try:
-            User.objects.create(name=name, msisdn=msisdn, type=int(type), organization=organization_obj, groups=groups, token=token)
-        except Exception, ex:
-            logger.error("Error in signup: %s" % str(ex))
-            return JSONResponse({"errorMsg": "Error occurred while user signup", "stat":"fail"}, status=status.HTTP_400_BAD_REQUEST)
+        if int(type) == PARENT:
+            created_id = create_parent(name, msisdn, organization_obj, token, groups=[group], students=[])
+        elif int(type) == TEACHER:
+            created_id = create_teacher(name, msisdn, organization_obj, token, groups=[group])
+        elif int(type) == ADMIN:
+            created_id = create_admin(name, msisdn, organization_obj, token)
         else:
-            logger.debug("Successfully signed up for msisdn: %s" %(msisdn))
-            return JSONResponse({"stat":"ok", "token":token})
+            # create student will create the student record and add the student into the group, parents are optional
+            if not roll_no:
+                raise ValidationError("Roll No is required")
+            created_id = create_student(name, roll_no, group)
+        created_id = get_base64_encode(created_id)
+        logger.debug("Successfully signed up for msisdn: %s" %(msisdn))
+        return JSONResponse({"stat": "ok", "token": token, "id": created_id})
 
 class AccountLogin(APIView):
 
     def show_attendance(self, user):
-        #get the student from the parent, make sure the student has been registered already
-        childrens = User.objects.filter(parent_id=user.id)
-        #gettting the information of present month
+        students = Student.objects.filter(parents=user)
         month = datetime.today().month
         year = datetime.today().year
         from_date = datetime(year, month, 1)
         to_date = from_date + timedelta(days=31)
         result_dict = {}
-        for child in childrens:
-            result_dict[child.name]={}
+        for student in students:
+            result_dict[student.id]={}
+            result_dict[student.id]['name']=student.name
 
-        #prepare dic {'name1':{day1:0/1, day2:0/1}, 'name2':{day1:0/1, day2:0/1}}
-        attendance_objs = Attendance.objects.filter(student__in=childrens, ts_gte=int(from_date.strftime("%s")), ts_lte = int(to_date.strftime("%s")))
+        #prepare dic {'student_id1':{'name':'name1', 'att':{day1:0/1, day2:0/1}, 'student_id2':{'name':'name2', 'att':{day1:0/1, day2:0/1}}}
+        attendance_objs = Attendance.objects.filter(student__in=students, ts_gte=int(from_date.strftime("%s")), ts_lte = int(to_date.strftime("%s")))
         for attendance in attendance_objs:
-            result_dict[attendance.student.name].update({datetime.fromtimestamp(attendance.ts): attendance.present})
+            if result_dict.get(attendance.student.id).has_key('att'):
+                result_dict[attendance.student.id]['att'].update({datetime.fromtimestamp(attendance.ts): attendance.present})
+            else:
+                result_dict[attendance.student.id]['att'] = {datetime.fromtimestamp(attendance.ts): attendance.present}
         return result_dict
 
 
@@ -141,14 +153,19 @@ class AccountLogin(APIView):
         #preparing data {'class1':[{'name1':'roll1'}, {'name2':'roll2'}], 'class2':[{'name1':'roll1'},..],..}
         group_ids = []
         result_dict = {}
-        for group in user.groups:
-            group_ids.append(group.id)
-        group_objs = Group.objects.filter(id__in = group_ids)
-        for group in group_objs:
+        groups = Group.objects.filter(owner=user)
+        for group in groups:
             result_dict[group.name]={}
-            for student_info_obj in group.members:
-                result_dict[group.name].update({student_info_obj.student.name : student_info_obj.roll_no})
+            for student in group.members:
+                result_dict[group.name].update({student.name : student.roll_no})
         return result_dict
+
+    def show_teachers(self, user):
+        groups = Group.objects.filter(organization=user.organization)
+        teachers = []
+        for group in groups:
+            teachers.append(group.owner)
+        return teachers
 
     def post(self, request):
         """
@@ -219,10 +236,14 @@ class AccountLogin(APIView):
             if type == PARENT:
                 #show attendance
                 result_dict = self.show_attendance(user)
-                return JSONResponse({"parent_result":result_dict, "stat":"ok"}, status=status.HTTP_200_OK)
-            else:
+                return JSONResponse({"result":result_dict, "stat":"ok"}, status=status.HTTP_200_OK)
+            elif type == TEACHER:
                 result_dict = self.show_groups(user)
-                return JSONResponse({"teacher_result":result_dict, "stat":"ok"}, status=status.HTTP_200_OK)
+                return JSONResponse({"result":result_dict, "stat":"ok"}, status=status.HTTP_200_OK)
+            elif type == ADMIN:
+                #sending list of teachers objects
+                result_dict = self.show_teachers(user)
+                return JSONResponse({"result":result_dict, "stat":"ok"}, status=status.HTTP_200_OK)
         except Exception, ex:
             logger.error("Error while getting info: %s" % str(ex))
             return JSONResponse({"stat":"fail", "errorMsg":"Error while getting information"})
@@ -337,7 +358,7 @@ class GroupView(APIView):
 
         try:
             organization_id = str(bson.ObjectId(base64.b64decode(organization_id, BASE64_URLSAFE)))
-            organization = Organization.objects.get(id=organization_id)
+            organization = Organization.objects.get(id=str(organization_id))
         except DoesNotExist:
             raise ValidationError("Organization Id is invalid: %s" % organization_id)
 

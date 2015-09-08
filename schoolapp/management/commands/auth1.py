@@ -115,7 +115,7 @@ class EjabberdAuth:
             (size,) = struct.unpack('>h', input_length)
             result = sys.stdin.read(size)
 
-            logging.debug('Read %d bytes: %s', size, result)
+            logging.info('Read %d bytes: %s', size, result)
 
             return result.split(':')
         except IOError:
@@ -210,7 +210,6 @@ class EjabberdAuth:
         the authentication results to stdout towards the
         connected ejabberd instance.
         '''
-
         while True:
             try:
                 data = self.__from_ejabberd()
@@ -222,6 +221,7 @@ class EjabberdAuth:
                 break
 
             success = False
+            logging.info("data is :%s" % data)
             cmd = data[0]
 
             logging.info("data: %s" % data)
@@ -269,7 +269,7 @@ def get_args():
     return args['url'], args['debug'], args['log']
 
 
-if __name__ == '__main__':
+"""if __name__ == '__main__':
     URL, DEBUG, LOG = get_args()
 
     LOGFILE = LOG + '/kauth.log'
@@ -293,13 +293,16 @@ if __name__ == '__main__':
 
     logging.warn('Terminating ejabberd auth script')
 
+"""
+
 class Command(BaseCommand):
     help = "Runs an ejabberd auth service"
 
     def handle(self, **options):
+        print "inside handle"
         URL, DEBUG, LOG = get_args()
         LOGFILE = LOG + '/kauth.log'
-        LEVEL = logging.DEBUG if DEBUG else logging.INFO
+        LEVEL = logging.DEBUG if DEBUG else logging.DEBUG
         PID = str(os.getpid())
         FMT = '[%(asctime)s] ['+PID+'] [%(levelname)s] %(message)s'
 
