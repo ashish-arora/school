@@ -10,10 +10,11 @@ import socket
 import gevent
 from gevent import monkey, greenlet
 from django.core.cache import cache
-from school.settings import NOTIFICATION_QUEUE,GCM_APIKEY,GCM_PROJECT_ID,GCM_QUEUE
+from school.settings import NOTIFICATION_QUEUE,GCM_APIKEY,GCM_PROJECT_ID,GCM_QUEUE,SMS_QUEUE,smsgw_ssd_url,ssd_auth_key,ssd_sender_id
 from schoolapp.utils.jabber_client import JabberClient
 from gcm.gcm import GCM
 from models import User
+import requests
 
 monkey.patch_all()
 
@@ -138,7 +139,17 @@ class GcmPush(object):
         if reg_id and data['message']:
             gcm.plaintext_request(registration_id=reg_id, data=data['message'])
 
+class SendSms(object):
+    queue = SMS_QUEUE
 
+    @staticmethod
+    def perform(data):
+        msisdn = data.get('msisdn')
+        message = data.get('message')
+        #http://sms.ssdindia.com/api/sendhttp.php?authkey=YourAuthKey&mobiles=919999999990,919999999999&message=message&sender=senderid&route=1&country=0
+        payload = {'authkey': ssd_auth_key, 'mobiles': msisdn, 'message':message,'sender':ssd_sender_id,'route':4}
+        r = requests.get(smsgw_ssd_url,params=payload)
+        logging.debug(r.text)
 
 if __name__ == '__main__':
     queues = {NOTIFICATION_QUEUE: 5, GCM_QUEUE: 5}
