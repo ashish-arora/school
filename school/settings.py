@@ -138,6 +138,6 @@ GCM_APIKEY = "<api_key>"
 GCM_PROJECT_ID = "<gcm_project_id>"
 
 #### Sms host ####
-ssd_sender_id = 'SCHAP'
+ssd_sender_id = 'SCCHAP'
 smsgw_ssd_url = 'http://sms.ssdindia.com/api/sendhttp.php'
 ssd_auth_key = '9218AIpGhQJkUvJc55f57357'

@@ -147,7 +147,8 @@ class SendSms(object):
         msisdn = data.get('msisdn')
         message = data.get('message')
         #http://sms.ssdindia.com/api/sendhttp.php?authkey=YourAuthKey&mobiles=919999999990,919999999999&message=message&sender=senderid&route=1&country=0
-        payload = {'authkey': ssd_auth_key, 'mobiles': msisdn, 'message':message,'sender':ssd_sender_id,'route':4}
+        #route=4, transactional sms & route=1, promotional sms
+        payload = {'authkey': ssd_auth_key, 'mobiles': msisdn, 'message':message,'sender':ssd_sender_id,'route':'4'}
         r = requests.get(smsgw_ssd_url,params=payload)
         logging.debug(r.text)
 
