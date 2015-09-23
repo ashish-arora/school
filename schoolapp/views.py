@@ -252,7 +252,11 @@ class AccountLogin(APIView):
 class AccountPinValidation(APIView):
     def get(self,request):
         msisdn = request.data.get('msisdn')
-        #TODO: currently msisdn is not verified
+        user = None
+        try:
+            user = User.objects.get(msisdn)
+        except Exception, ex:
+            raise AuthenticationFailed("Invalid credentials for msisdn:%s" %(msisdn))
         pincode = random.randint(1000,9999)
         key = "pincodes-"+msisdn
         cache.set(key,pincode)
@@ -272,7 +276,7 @@ class AccountPinValidation(APIView):
             try:
                 user = User.objects.get(msisdn)
             except Exception, ex:
-                raise AuthenticationFailed("Invalid credentials,msisdn:%s" %(msisdn))
+                raise AuthenticationFailed("Invalid credentials for msisdn:%s" %(msisdn))
             token = base64.urlsafe_b64encode(os.urandom(8))
             user.token = token
             user.save()
