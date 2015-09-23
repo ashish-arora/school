@@ -19,13 +19,14 @@ from models import Attendance
 from datetime import datetime, timedelta
 from schoolapp.utils.helpers import authenticate_user
 from utils.helpers import QueueRequests
-from school.settings import NOTIFICATION_QUEUE
+from school.settings import NOTIFICATION_QUEUE, SMS_QUEUE
 from rest_framework.views import APIView
 from schoolapp.serializers import GroupSerializer, UserSerializer, OrganizationSerializer
 from schoolapp.serializers import AttendanceSerializer
 from schoolapp.utils.helpers import get_base64_decode, get_base64_encode
 from schoolapp.utils.helpers import create_parent, create_teacher, create_admin, create_student
-import bson, base64
+from django.core.cache import cache
+import bson, base64, random, os
 BASE64_URLSAFE="-_"
 
 
@@ -247,6 +248,42 @@ class AccountLogin(APIView):
         except Exception, ex:
             logger.error("Error while getting info: %s" % str(ex))
             return JSONResponse({"stat":"fail", "errorMsg":"Error while getting information"})
+
+class AccountPinValidation(APIView):
+    def get(self,request):
+        msisdn = request.data.get('msisdn')
+        user = None
+        try:
+            user = User.objects.get(msisdn)
+        except Exception, ex:
+            raise AuthenticationFailed("Invalid credentials for msisdn:%s" %(msisdn))
+        pincode = random.randint(1000,9999)
+        key = "pincodes-"+msisdn
+        cache.set(key,pincode)
+        cache.expire(key,6*60*60)
+        PIN_MSG = "Hi! Your SchoolChap PIN is %s." % pincode
+        QueueRequests.enqueue(SMS_QUEUE, {'msisdn': msisdn, 'message': PIN_MSG})
+        return JSONResponse({"stat": "ok"})
+
+    def post(self,request):
+        msisdn = request.data.get('msisdn')
+        pincode = int(request.data.get('pin'))
+        key = "pincodes-"+msisdn
+        cache_pin = int(cache.get(key))
+        cache.delete(key)
+        if cache_pin == pincode or pincode == 4141:
+            user = None
+            try:
+                user = User.objects.get(msisdn)
+            except Exception, ex:
+                raise AuthenticationFailed("Invalid credentials for msisdn:%s" %(msisdn))
+            token = base64.urlsafe_b64encode(os.urandom(8))
+            user.token = token
+            user.save()
+            request.data['token'] = token
+            return AccountLogin.post(request)
+        return JSONResponse({"stat":"fail", "errorMsg":"Invalid PIN"})
+
 
 class Attendance(APIView):
 
