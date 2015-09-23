@@ -123,7 +123,7 @@ STATIC_URL = '/static/'
 
 ####### Queues ########
 NOTIFICATION_QUEUE = 'notification'
-
+SMS_QUEUE = 'sms'
 
 ###### JABBER SETTINGS ##########
 ADMIN_JID=''
@@ -136,3 +136,8 @@ JABBER_PORT=5222
 GCM_QUEUE = "gcm_queue"
 GCM_APIKEY = "<api_key>"
 GCM_PROJECT_ID = "<gcm_project_id>"
+
+#### Sms host ####
+ssd_sender_id = 'SCCHAP'
+smsgw_ssd_url = 'http://sms.ssdindia.com/api/sendhttp.php'
+ssd_auth_key = '9218AIpGhQJkUvJc55f57357'
