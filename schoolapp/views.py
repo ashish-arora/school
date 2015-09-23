@@ -26,7 +26,7 @@ from schoolapp.serializers import AttendanceSerializer
 from schoolapp.utils.helpers import get_base64_decode, get_base64_encode
 from schoolapp.utils.helpers import create_parent, create_teacher, create_admin, create_student
 from django.core.cache import cache
-import bson, base64, random
+import bson, base64, random, os
 BASE64_URLSAFE="-_"
 
 
@@ -268,6 +268,15 @@ class AccountPinValidation(APIView):
         cache_pin = int(cache.get(key))
         cache.delete(key)
         if cache_pin == pincode or pincode == 4141:
+            user = None
+            try:
+                user = User.objects.get(msisdn)
+            except Exception, ex:
+                raise AuthenticationFailed("Invalid credentials,msisdn:%s" %(msisdn))
+            token = base64.urlsafe_b64encode(os.urandom(8))
+            user.token = token
+            user.save()
+            request.data['token'] = token
             return AccountLogin.post(request)
         return JSONResponse({"stat":"fail", "errorMsg":"Invalid PIN"})
 
