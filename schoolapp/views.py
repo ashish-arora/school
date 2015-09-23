@@ -21,8 +21,8 @@ from schoolapp.utils.helpers import authenticate_user
 from utils.helpers import QueueRequests
 from school.settings import NOTIFICATION_QUEUE, SMS_QUEUE
 from rest_framework.views import APIView
-from schoolapp.serializers import GroupSerializer, UserSerializer, OrganizationSerializer
-from schoolapp.serializers import AttendanceSerializer
+from schoolapp.serializers import GroupSerializer, UserSerializer, OrganizationSerializer, StudentSerializer
+from schoolapp.serializers import AttendanceSerializer, UserLoginSerializer
 from schoolapp.utils.helpers import get_base64_decode, get_base64_encode
 from schoolapp.utils.helpers import create_parent, create_teacher, create_admin, create_student
 from django.core.cache import cache
@@ -60,7 +60,7 @@ class AccountSignUp(APIView):
                 type: string
 
         serializer: UserSerializer
-        omit_serializer: false
+        omit_serializer: True
 
         parameters_strategy: merge
         omit_parameters:
@@ -76,17 +76,17 @@ class AccountSignUp(APIView):
             name = request.data.get('name')
             msisdn = request.data.get('msisdn')
             roll_no = request.data.get('roll_no', '')
-            type = request.data.get('type')
+            type = int(request.data.get('type'))
             parent_data = request.data.get('parent_data', '')
-            organization_id = request.data.get('organization_id')
-            group_id = request.data.get('group_id')
+            organization_id = str(request.data.get('organization'))
+            group_id = str(request.data.get('group'))
         except Exception, ex:
             logger.error("Error: %s" %(str(ex)))
             raise ValidationError("Required parameter were not there")
 
         if type not in VALID_TYPES:
             raise ValidationError("Not valid user type")
-
+        print type
         if msisdn.startswith("+"):
             if len(msisdn[1:]) != 12 or not msisdn[1:].isdigit():
                 raise ValidationError("Invalid msisdn:%s" % msisdn)
@@ -95,10 +95,11 @@ class AccountSignUp(APIView):
         elif not msisdn.isdigit() or not len(msisdn) == 10:
             raise ValidationError("Invalid country in msisdn: %s" % msisdn)
 
-        try:
-            parent_data = json.loads(parent_data)
-        except Exception, ex:
-            raise ValidationError("Invalid parent data, cannot parse json")
+        if parent_data:
+            try:
+                parent_data = json.loads(parent_data)
+            except Exception, ex:
+                raise ValidationError("Invalid parent data, cannot parse json")
 
         try:
             group = Group.objects.get(id=get_base64_decode(str(group_id)))
@@ -113,7 +114,7 @@ class AccountSignUp(APIView):
         token = base64.urlsafe_b64encode(os.urandom(8))
 
         if int(type) == PARENT:
-            created_id = create_parent(name, msisdn, organization_obj, token, groups=[group], students=[])
+            created_id = create_parent(name, msisdn, organization_obj, token, students=[])
         elif int(type) == TEACHER:
             created_id = create_teacher(name, msisdn, organization_obj, token, groups=[group])
         elif int(type) == ADMIN:
@@ -131,6 +132,9 @@ class AccountLogin(APIView):
 
     def show_attendance(self, user):
         students = Student.objects.filter(parents=user)
+        if not students:
+            print "no students for this parent"
+            return {}
         month = datetime.today().month
         year = datetime.today().year
         from_date = datetime(year, month, 1)
@@ -182,18 +186,8 @@ class AccountLogin(APIView):
             msisdn:
                 required: true
                 type: string
-            type:
-                required: true
-                type: integer
-            devices:
-                required: true
-                type: string
-            country:
-                required: true
-                type: string
 
-
-        serializer: UserSerializer
+        serializer: UserLoginSerializer
         omit_serializer: false
 
         parameters_strategy: merge
@@ -209,9 +203,7 @@ class AccountLogin(APIView):
         try:
             msisdn = request.data.get('msisdn')
             token = request.data.get('token')
-            type = request.data.get('type')
             devices = request.data.get('devices')
-            country = request.data.get('country')
         except Exception, ex:
             logger.error("Error: %s" %(str(ex)))
             raise ValidationError("Required parameter were not there")
@@ -221,9 +213,9 @@ class AccountLogin(APIView):
             raise ParseError("Invalid json data: %s" % devices)
 
         try:
-            user = User.objects.get(msisdn=msisdn, type=int(type), token=token)
+            user = User.objects.get(msisdn=msisdn, token=token)
         except Exception, ex:
-            raise AuthenticationFailed("Invalid credentials,msisdn:%s, token:%s, type:%s" %(msisdn, token, type))
+            raise AuthenticationFailed("Invalid credentials,msisdn:%s, token:%s, type:%s" %(msisdn, token))
 
         try:
             user.devices = devices
@@ -234,6 +226,7 @@ class AccountLogin(APIView):
 
         #get attendance data depending on the user type\
         try:
+            type = user.type
             if type == PARENT:
                 #show attendance
                 result_dict = self.show_attendance(user)
@@ -318,7 +311,7 @@ class Attendance(APIView):
         """
         try:
             attendance_data = request.data.get('attendance_data')
-            group_id = request.data.get('group_id')
+            group_id = str(request.data.get('group_id'))
         except Exception, ex:
             logger.error("Error: %s" %(str(ex)))
             raise ValidationError("Required parameter was not there")
@@ -369,7 +362,7 @@ class GroupView(APIView):
             name:
                 required: true
                 type: string
-            organization_id:
+            organization:
                 required: true
                 type: string
 
@@ -388,7 +381,7 @@ class GroupView(APIView):
         """
         try:
             name = request.data.get('name')
-            organization_id = request.data.get('organization_id')
+            organization_id = str(request.data.get('organization'))
         except Exception, ex:
             logger.error("Error: %s" %(str(ex)))
             raise ValidationError("Required parameter was not there")
@@ -407,6 +400,45 @@ class GroupView(APIView):
         else:
             group_id = base64.b64encode(group.id.binary, BASE64_URLSAFE)
             return JSONResponse({"stat": "ok", "group_id": group_id})
+
+    def get(self, request):
+        """
+        Create Group
+
+        ---
+        # YAML (must be separated by `---`)
+
+        type:
+            name:
+                required: true
+                type: string
+            organization_id:
+                required: true
+                type: string
+
+        serializer: GroupSerializer
+        omit_serializer: false
+
+        parameters_strategy: merge
+        omit_parameters:
+            - path
+
+        responseMessages:
+            - code: 200
+              message: Successfully Created the Group
+            - code: 400
+              message: Bad Request
+        """
+        try:
+            groups = Group.objects.all()
+        except Exception, ex:
+            logger.error("Error occurred while creating organization doc: %s, name: %s, country:%s, city: %s, state:%s, address:%s " % (str(ex), name, country, city, state, address))
+            raise APIException("Error while saving data")
+        else:
+            serializer = GroupSerializer(groups, many=True)
+            return JSONResponse(serializer.data, status=200)
+
+
 
 class OrganizationView(APIView):
 
@@ -466,4 +498,34 @@ class OrganizationView(APIView):
         else:
             organization_id = base64.b64encode(organization.id.binary, BASE64_URLSAFE)
         return JSONResponse({"stat": "ok", "organization_id":organization_id})
+
+    def get(self, request):
+        """
+        Create Organization
+
+        ---
+        # YAML (must be separated by `---`)
+
+        serializer: OrganizationSerializer
+        omit_serializer: false
+
+        parameters_strategy: merge
+        omit_parameters:
+            - path
+
+        responseMessages:
+            - code: 200
+              message: Successfully Created the Organization
+            - code: 400
+              message: Bad Request
+        """
+        try:
+            organizations = Organization.objects.all()
+        except Exception, ex:
+            logger.error("Error occurred while creating organization doc: %s, name: %s, country:%s, city: %s, state:%s, address:%s " % (str(ex), name, country, city, state, address))
+            raise APIException("Error while saving data")
+        else:
+            serializer = OrganizationSerializer(organizations, many=True)
+            return JSONResponse(serializer.data, status=200)
+
 
