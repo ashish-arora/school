@@ -9,12 +9,12 @@ import json
 import socket
 import gevent
 from gevent import monkey, greenlet
-from django.core.cache import cache
 from school.settings import NOTIFICATION_QUEUE,GCM_APIKEY,GCM_PROJECT_ID,GCM_QUEUE,SMS_QUEUE,smsgw_ssd_url,ssd_auth_key,ssd_sender_id
 from schoolapp.utils.jabber_client import JabberClient
 from gcm.gcm import GCM
 from models import User
 import requests
+from school.settings import REDIS_CONN as cache
 
 monkey.patch_all()
 

@@ -28,6 +28,7 @@ from schoolapp.utils.helpers import create_parent, create_teacher, create_admin,
 from django.core.cache import cache
 import bson, base64, random, os
 BASE64_URLSAFE="-_"
+from school.settings import REDIS_CONN as cache
 
 
 logger = log.Logger.get_logger(__file__)
@@ -207,11 +208,12 @@ class AccountLogin(APIView):
         except Exception, ex:
             logger.error("Error: %s" %(str(ex)))
             raise ValidationError("Required parameter were not there")
-        try:
-            devices = json.loads(devices)
-        except Exception, ex:
-            raise ParseError("Invalid json data: %s" % devices)
 
+        if not isinstance(devices, dict):
+            try:
+                devices = json.loads(devices)
+            except Exception, ex:
+                raise ParseError("Invalid json data: %s" % devices)
         try:
             user = User.objects.get(msisdn=msisdn, token=token)
         except Exception, ex:
@@ -243,15 +245,46 @@ class AccountLogin(APIView):
             return JSONResponse({"stat":"fail", "errorMsg":"Error while getting information"})
 
 class AccountPinValidation(APIView):
+
     def get(self,request):
-        msisdn = request.data.get('msisdn')
+
+        """
+        Generate Pin
+
+        ---
+        # YAML (must be separated by `---`)
+
+        type:
+            devices:
+                required: true
+                type: string
+            msisdn:
+                required: true
+                type: string
+
+        omit_serializer: true
+
+        parameters_strategy: merge
+        omit_parameters:
+            - path
+
+        responseMessages:
+            - code: 200
+              message: Successfully Logged in
+            - code: 400
+              message: Bad Request
+        """
+        try:
+            msisdn=request.QUERY_PARAMS.get("msisdn")
+        except Exception, ex:
+            raise ValidationError("Msisdn is not provided")
         user = None
         try:
-            user = User.objects.get(msisdn)
+            user = User.objects.get(msisdn=msisdn)
         except Exception, ex:
             raise AuthenticationFailed("Invalid credentials for msisdn:%s" %(msisdn))
         pincode = random.randint(1000,9999)
-        key = "pincodes-"+msisdn
+        key = "pincodes-"+str(msisdn)
         cache.set(key,pincode)
         cache.expire(key,6*60*60)
         PIN_MSG = "Hi! Your SchoolChap PIN is %s." % pincode
@@ -259,22 +292,26 @@ class AccountPinValidation(APIView):
         return JSONResponse({"stat": "ok"})
 
     def post(self,request):
-        msisdn = request.data.get('msisdn')
-        pincode = int(request.data.get('pin'))
-        key = "pincodes-"+msisdn
+        try:
+            msisdn = request.data.get('msisdn')
+            pincode = int(request.data.get('pin'))
+        except Exception, ex:
+            logger.error("Parameters are not in correct format: %s" % str(ex))
+            raise ValidationError("Parameters are not in correct format: %s" % str(ex))
+        key = "pincodes-"+str(msisdn)
         cache_pin = int(cache.get(key))
         cache.delete(key)
         if cache_pin == pincode or pincode == 4141:
             user = None
             try:
-                user = User.objects.get(msisdn)
+                user = User.objects.get(msisdn=msisdn)
             except Exception, ex:
                 raise AuthenticationFailed("Invalid credentials for msisdn:%s" %(msisdn))
             token = base64.urlsafe_b64encode(os.urandom(8))
             user.token = token
             user.save()
             request.data['token'] = token
-            return AccountLogin.post(request)
+            return AccountLogin().post(request)
         return JSONResponse({"stat":"fail", "errorMsg":"Invalid PIN"})
 
 

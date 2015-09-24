@@ -1,6 +1,5 @@
 __author__ = 'ashish'
 from schoolapp.utils import log
-from django.core.cache import cache
 import time, json
 logging = log.Logger.get_logger(__file__)
 from schoolapp.models import User, Student
@@ -8,6 +7,7 @@ from schoolapp.models import TEACHER, PARENT, ADMIN
 from mongoengine.errors import *
 import base64, bson
 BASE64_URLSAFE="-_"
+from school.settings import REDIS_CONN as cache
 
 def authenticate_user(func):
     """
