@@ -567,8 +567,8 @@ class OrganizationView(APIView):
 
 class PingWebHandler(APIView):
 
-    def get(self):
+    def get(self,request):
         return JSONResponse({'stat':'pong'})
 
-    def post(self):
+    def post(self,request):
         return JSONResponse({'stat':'pong'})
