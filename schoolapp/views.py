@@ -294,7 +294,7 @@ class AccountPinValidation(APIView):
     def post(self,request):
         try:
             msisdn = request.data.get('msisdn')
-            pincode = int(request.data.get('pin'))
+            pincode = int(request.data.get('pin','0'))
         except Exception, ex:
             logger.error("Parameters are not in correct format: %s" % str(ex))
             raise ValidationError("Parameters are not in correct format: %s" % str(ex))
@@ -565,4 +565,10 @@ class OrganizationView(APIView):
             serializer = OrganizationSerializer(organizations, many=True)
             return JSONResponse(serializer.data, status=200)
 
+class PingWebHandler(APIView):
 
+    def get(self):
+        return JSONResponse({'stat':'pong'})
+
+    def post(self):
+        return JSONResponse({'stat':'pong'})

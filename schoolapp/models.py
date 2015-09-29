@@ -58,7 +58,8 @@ class Group(Document):
     owner = ListField(ReferenceField(User))
 
     meta={
-        'indexes': ['owner']
+        'indexes': ['owner'],
+        'collection': 'groups'
     }
 
 class Attendance(Document):

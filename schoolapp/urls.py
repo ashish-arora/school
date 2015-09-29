@@ -32,6 +32,7 @@ urlpatterns = patterns('',
     url(r'^api/v1/organization', views.OrganizationView.as_view()),
     url(r'^api/v1/group', views.GroupView.as_view()),
     url(r'^api/v1/pin', views.AccountPinValidation.as_view()),
+    url(r'^api/ping',views.PingWebHandler.as_view()),
 
     url(r'^api-auth/', include('rest_framework.urls', namespace='rest_framework')),
 
