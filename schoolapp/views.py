@@ -232,14 +232,14 @@ class AccountLogin(APIView):
             if type == PARENT:
                 #show attendance
                 result_dict = self.show_attendance(user)
-                return JSONResponse({"result":result_dict, "stat":"ok"}, status=status.HTTP_200_OK)
+                return JSONResponse({"token":token,"result":result_dict, "stat":"ok"}, status=status.HTTP_200_OK)
             elif type == TEACHER:
                 result_dict = self.show_groups(user)
-                return JSONResponse({"result":result_dict, "stat":"ok"}, status=status.HTTP_200_OK)
+                return JSONResponse({"token":token,"result":result_dict, "stat":"ok"}, status=status.HTTP_200_OK)
             elif type == ADMIN:
                 #sending list of teachers objects
                 result_dict = self.show_teachers(user)
-                return JSONResponse({"result":result_dict, "stat":"ok"}, status=status.HTTP_200_OK)
+                return JSONResponse({"token":token,"result":result_dict, "stat":"ok"}, status=status.HTTP_200_OK)
         except Exception, ex:
             logger.error("Error while getting info: %s" % str(ex))
             return JSONResponse({"stat":"fail", "errorMsg":"Error while getting information"})
