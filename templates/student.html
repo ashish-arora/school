@@ -4,6 +4,10 @@
 {% endblock css%}
 
 {% block javascript%}
+        <script>
+        $(window).load(function(){
+            {% if request.POST %}
+
 {% endblock javascript%}
 
 {% block content %}w
@@ -28,6 +32,34 @@
                         </ol>
                     </div>
                 </div>
+                <div class="row">
+                   <form class="form-inline">
+                        <div class="form-group">
+                            <label  for="exampleInputEmail3">First name</label>
+                            <input type="text" class="form-control" id="exampleInputEmail3" placeholder="Name">
+                        </div>
+                       <div class="form-group">
+                            <label  for="exampleInputEmail3">Last name</label>
+                            <input type="text" class="form-control" id="exampleInputEmail3" placeholder="Name">
+                        </div>
+                        <div class="form-group">
+                            <label  for="exampleInputPassword3">Roll No</label>
+                            <input type="text" class="form-control" id="exampleInputPassword3" placeholder="Roll No">
+                        </div>
+                        <div class="form-group">
+                            <label for="exampleInputPassword3">Group</label>
+                            <select class="form-control" id="exampleInputPassword3">
+                              <option>9A</option>
+                              <option>8B</option>
+                              <option>8C</option>
+                              <option>2D</option>
+                              <option>3F</option>
+                            </select>
+                         </div>
+                          <button type="submit" class="btn btn-primary">Search</button>
+                    </form>
+                </div>
+
                 <div class="row">
                             <div class="col-lg-8">
                                 <ul class="nav nav-tabs">
