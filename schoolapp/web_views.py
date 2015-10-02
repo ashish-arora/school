@@ -63,8 +63,8 @@ class GroupView(View):
 
     def get(self, request):
         # <view logic>
-        groups = get_groups(request.user)
         organizations = request.user.organization
+        groups = get_groups(request.user, organizations)
         owners = CustomUser.objects.filter(type=TEACHER, organization__in=organizations)
         members = Student.objects.filter(organization__in=organizations)
         return render(request, self.template_name, {"groups":groups, "organizations":organizations, "owners":owners, "members":members})
@@ -135,7 +135,7 @@ class GroupView(View):
                     group.owner = owner
                 group.save()
                 message = "Group has been successfully updated"
-                groups = get_groups(request.user)
+                groups = get_groups(request.user, [organization])
             return render(request, self.template_name, {"errors": errors, "message": message, 'group':group, "groups": groups})
         else:
             # to handle create request
@@ -146,7 +146,7 @@ class GroupView(View):
                 logger.error("Error occurred while creating group:%s" % str(ex))
                 errors.append("Error while saving data, please try again")
             else:
-                groups = get_groups(request.user)
+                groups = get_groups(request.user, [organization])
                 message = "Group has been successfully created"
             return render(request, self.template_name, {"groups": groups, "errors": errors, "message": message})
 

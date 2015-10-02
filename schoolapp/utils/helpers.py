@@ -192,9 +192,9 @@ def create_admin(name, msisdn, organization, token):
         raise OperationError("Error occurred while creating/updating admin account, name: %s, msisdn:%s" %(name, msisdn))
 
 
-def get_groups(user):
+def get_groups(user, organization):
     if user.is_superuser:
-        groups = Group.objects.filter()
+        groups = Group.objects.filter(organization__in=organization)
     else:
         groups = Group.objects.filter(owner=user)
     return groups
