@@ -106,7 +106,8 @@ from mongoengine import connect
 connect('schooldb', host='127.0.0.1')
 
 AUTH_USER_MODEL = 'mongo_auth.MongoUser'
-MONGOENGINE_USER_DOCUMENT = 'mongoengine.django.auth.User'
+#MONGOENGINE_USER_DOCUMENT = 'mongoengine.django.auth.User'
+MONGOENGINE_USER_DOCUMENT = 'schoolapp.models.CustomUser'
 
 
 AUTHENTICATION_BACKENDS = (
