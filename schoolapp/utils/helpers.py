@@ -8,6 +8,7 @@ from mongoengine.errors import *
 import base64, bson
 BASE64_URLSAFE="-_"
 from school.settings import REDIS_CONN as cache
+from schoolapp.models import Group
 
 def authenticate_user(func):
     """
@@ -189,5 +190,13 @@ def create_admin(name, msisdn, organization, token):
     except Exception, ex:
         logging.error("Error occurred while creating/updating admin account, name: %s, msisdn:%s, error:%s" %(name, msisdn, str(ex)))
         raise OperationError("Error occurred while creating/updating admin account, name: %s, msisdn:%s" %(name, msisdn))
+
+
+def get_groups(user):
+    if user.is_superuser:
+        groups = Group.objects.filter()
+    else:
+        groups = Group.objects.filter(owner=user)
+    return groups
 
 
