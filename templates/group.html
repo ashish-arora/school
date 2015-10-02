@@ -9,30 +9,30 @@
             {% if request.POST %}
                 console.log("inside post");
                 $("#inputname").val('{{request.POST.name}}');
-                $("#inputcity").val('{{request.POST.city}}');
-                $("#inputaddress").val('{{request.POST.address}}');
-                $("#inputstate").val('{{request.POST.state}}');
-                $("#inputcountry").val('{{request.POST.country}}');
+                {% if request.POST.post_type == "post" %}
+                    $("#modal_form").attr('action', '/group/');
+                {% else %}
+                    $("#modal_form").attr('action', '/group/' + '{{group.id}}' + '/');
+                {% endif %}
             {% endif %}
 
             {% if errors %}
                 $('#myModal').modal('show');
             {% endif %}
 
-            $("#edit_btn").click(function() {
-                var group_id = $("#edit_btn").val();
-                console.log("group id is " + group_id);
+            $(".edit_btn").click(function() {
+                var group_id = $(this).attr("value");
+                console.log("Group id is " + group_id);
                 $("#inputname").val($("#" + group_id).find('td').eq(0).html());
-                $("#inputcity").val($("#" + group_id).find('td').eq(1).html());
-                $("#inputstate").val($("#" + group_id).find('td').eq(2).html());
-                $("#inputcountry").val($("#" + group_id).find('td').eq(3).html());
-                $("#inputaddress").val($("#" + group_id).find('td').eq(4).html());
+                $("#modal_form").attr('action', '/group/' + group_id + '/');
+                $("#errors_div").val('');
+                $("#myModalLabel").text("Edit Group");
                 $('#myModal').modal('show');
             });
 
-            $("#remove_btn").click(function(){
-                var group_id = $("#remove_btn").val();
-                console.log("group id is " + group_id);
+            $(".remove_btn").click(function(){
+                var group_id = $(this).attr("value");
+                console.log("Group id is " + group_id);
                 $.post("/api/v1/group/delete/",{"group_id": group_id, "csrfmiddlewaretoken": '{{csrf_token}}'}, function(data, status){
                     alert("Successfully removed the group");
                     $('#' + group_id).remove();
@@ -43,6 +43,14 @@
                 });
 
             });
+
+            $("#add_group").click(function(){
+                $("#modal_form").attr('action', '/group/');
+                $("#inputname").val('');
+                $("#errors_div").html('');
+                $("#myModalLabel").text("Add group");
+                $('#myModal').modal('show');
+            });
         });
     </script>
 
@@ -50,7 +58,6 @@
 
 {% block content %}
  <div id="page-wrapper">
-            {{owners}}
             <div class="container-fluid">
 
                 <!-- Page Heading -->
@@ -75,7 +82,6 @@
                      {{message}}
                     </div>
                 {% endif %}
-                {{request.POST.name}}
                 <div class="row">
                             <div class="col-lg-8">
                                 <ul class="nav nav-tabs">
@@ -99,26 +105,28 @@
         <h4 class="modal-title" id="myModalLabel">Add Class Info</h4>
       </div>
       <div class="modal-body">
-        <form class="form-horizontal">
+        <form class="form-horizontal" method="post">
             {% csrf_token %}
-            {% if errors %}
-                <div class="alert alert-danger">
-                    {% for error in errors %}
-                        <span>{{error}}</span>
-                    {% endfor %}
-                </div>
-            {% endif %}
+            <div id="errors_div">
+                {% if errors %}
+                    <div class="alert alert-danger">
+                        {% for error in errors %}
+                            <span>{{error}}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
             <div class="form-group">
                 <label for="inputEmail3" class="col-sm-2 control-label">Name</label>
                 <div class="col-sm-10">
-                    <input type="email" class="form-control" id="inputName" placeholder="Name">
+                    <input type="text" name="name" class="form-control" id="inputName" placeholder="Name">
                 </div>
             </div>
 
             <div class="form-group">
-                <label for="organization" class="col-sm-2 control-label">Organization</label>
+                <label for="group" class="col-sm-2 control-label">Organization</label>
                 <div class="col-sm-10">
-                    <select class="form-control" id="inputOrganization">
+                    <select class="form-control" name="organization_id" id="inputgroup">
                         {% for organization in organizations %}
                             <option value="{{organization.id}}">{{organization.name}}</option>
                         {% endfor %}
@@ -129,7 +137,7 @@
             <div class="form-group">
                 <label for="inputEmail3" class="col-sm-2 control-label">Members</label>
                 <div class="col-sm-10">
-                    <select multiple class="form-control" id="inputMembers">
+                    <select multiple class="form-control" name="member_id" id="inputMembers">
                         {% for member in members %}
                             <option value="{{member.id}}">{{member.name}}</option>
                         {% endfor %}
@@ -139,7 +147,7 @@
             <div class="form-group">
                 <label for="inputPassword3" class="col-sm-2 control-label">Owner</label>
                 <div class="col-sm-10">
-                    <select multiple class="form-control" id="inputOwners">
+                    <select multiple class="form-control" name="owner_id" id="inputOwners">
                         {% for owner in owners %}
                             <option value="{{owner.id}}">{{owner.name}}</option>
                         {% endfor %}
@@ -157,7 +165,7 @@
             </div>
             <div class="form-group">
                 <div class="col-sm-offset-2 col-sm-10">
-                    <button type="submit" class="btn btn-default">Sign in</button>
+                    <button type="submit" class="btn btn-default">Submit</button>
                 </div>
             </div>
         </form>
@@ -193,48 +201,6 @@
                                             <button type="button" style="width:45%;" id="remove_btn" value='{{group.id}}' class="btn btn-info">Remove</button></td>
                                         </tr>
                                     {% endfor %}
-                                    <!--<tr>
-                                        <td>/index.html</td>
-                                        <td>1265</td>
-                                        <td>32.3%</td>
-                                        <td>$321.33</td>
-                                    </tr>
-                                    <tr>
-                                        <td>/about.html</td>
-                                        <td>261</td>
-                                        <td>33.3%</td>
-                                        <td>$234.12</td>
-                                    </tr>
-                                    <tr>
-                                        <td>/sales.html</td>
-                                        <td>665</td>
-                                        <td>21.3%</td>
-                                        <td>$16.34</td>
-                                    </tr>
-                                    <tr>
-                                        <td>/blog.html</td>
-                                        <td>9516</td>
-                                        <td>89.3%</td>
-                                        <td>$1644.43</td>
-                                    </tr>
-                                    <tr>
-                                        <td>/404.html</td>
-                                        <td>23</td>
-                                        <td>34.3%</td>
-                                        <td>$23.52</td>
-                                    </tr>
-                                    <tr>
-                                        <td>/services.html</td>
-                                        <td>421</td>
-                                        <td>60.3%</td>
-                                        <td>$724.32</td>
-                                    </tr>
-                                    <tr>
-                                        <td>/blog/post.html</td>
-                                        <td>1233</td>
-                                        <td>93.2%</td>
-                                        <td>$126.34</td>
-                                    </tr>-->
                                 </tbody>
                             </table>
                         </div>
