@@ -8,6 +8,21 @@
         $(window).load(function(){
             {% if request.POST %}
             {% endif %}
+
+            $(".edit_btn").click(function() {
+                var organization_id = $(this).attr("value");
+                console.log("Organization id is " + organization_id);
+                $("#inputname").val($("#" + organization_id).find('td').eq(0).html());
+                $("#inputcity").val($("#" + organization_id).find('td').eq(1).html());
+                $("#inputstate").val($("#" + organization_id).find('td').eq(2).html());
+                $("#inputcountry").val($("#" + organization_id).find('td').eq(3).html());
+                $("#inputaddress").val($("#" + organization_id).find('td').eq(4).html());
+                $("#modal_form").attr('action', '/organization/' + organization_id + '/');
+                $("#error_messages").val('');
+                $("#myModalLabel").text("Edit Organization");
+                $('#myModal').modal('show');
+            });
+
             });
         </script>
 
@@ -88,21 +103,21 @@
       <div class="modal-body">
         <form class="form-horizontal">
             <div class="form-group">
-                <label for="inputEmail3" class="col-sm-2 control-label">Name</label>
+                <label for="inputEmail3" class="col-sm-2 control-label">First Name</label>
                 <div class="col-sm-10">
-                    <input type="email" class="form-control" id="inputName" placeholder="Name">
+                    <input type="text" class="form-control" id="inputName" placeholder="eg: Raju">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="inputEmail3" class="col-sm-2 control-label">Last Name</label>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" id="input_rollno" placeholder="eg: Rastogi">
                 </div>
             </div>
             <div class="form-group">
                 <label for="inputEmail3" class="col-sm-2 control-label">Roll No</label>
                 <div class="col-sm-10">
-                    <input type="email" class="form-control" id="input_rollno" placeholder="Roll No">
-                </div>
-            </div>
-            <div class="form-group">
-                <label for="inputEmail3" class="col-sm-2 control-label">Email</label>
-                <div class="col-sm-10">
-                    <input type="email" class="form-control" id="inputEmail3" placeholder="Email">
+                    <input type="text" class="form-control" id="inputEmail3" placeholder="eg: 2589">
                 </div>
             </div>
             <div class="form-group">
@@ -110,6 +125,7 @@
                 <div class="col-sm-10">
                     <input type="password" class="form-control" id="inputPassword3" placeholder="Password">
                 </div>
+
             </div>
             <div class="form-group">
                 <div class="col-sm-offset-2 col-sm-10">
@@ -141,53 +157,33 @@
                                 <thead>
                                     <tr>
                                         <th>Roll No</th>
-                                        <th>Name</th>
-                                        <th>Email</th>
-                                        <th>Password</th>
+                                        <th>First Name</th>
+                                        <th>Last Name</th>
+                                        <th>Class</th>
+                                        <th>Action</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <tr>
                                         <td>/index.html</td>
-                                        <td>1265</td>
-                                        <td>32.3%</td>
-                                        <td>$321.33</td>
+                                        <td>1ssfsdsdfs5</td>
+                                        <td>32.3%</td><td>32.3%</td>
+                                        <td><button type="button" style="width:45%;" id="edit_btn" value='{{organization.id}}' class="btn btn-success edit_btn">Edit</button>
+                                        <button type="button" style="width:45%;" id="remove_btn" value='{{organization.id}}' class="btn btn-info remove_btn">Remove</button></td>
                                     </tr>
                                     <tr>
                                         <td>/about.html</td>
-                                        <td>261</td>
+                                        <td>261</td><td>32.3%</td>
                                         <td>33.3%</td>
-                                        <td>$234.12</td>
+                                        <td><button type="button" style="width:45%;" id="edit_btn" value='{{organization.id}}' class="btn btn-success edit_btn">Edit</button>
+                                        <button type="button" style="width:45%;" id="remove_btn" value='{{organization.id}}' class="btn btn-info remove_btn">Remove</button></td>
                                     </tr>
                                     <tr>
-                                        <td>/sales.html</td>
-                                        <td>665</td>
-                                        <td>21.3%</td>
-                                        <td>$16.34</td>
-                                    </tr>
-                                    <tr>
-                                        <td>/blog.html</td>
-                                        <td>9516</td>
-                                        <td>89.3%</td>
-                                        <td>$1644.43</td>
-                                    </tr>
-                                    <tr>
-                                        <td>/404.html</td>
-                                        <td>23</td>
-                                        <td>34.3%</td>
-                                        <td>$23.52</td>
-                                    </tr>
-                                    <tr>
-                                        <td>/services.html</td>
-                                        <td>421</td>
-                                        <td>60.3%</td>
-                                        <td>$724.32</td>
-                                    </tr>
-                                    <tr>
-                                        <td>/blog/post.html</td>
-                                        <td>1233</td>
-                                        <td>93.2%</td>
-                                        <td>$126.34</td>
+                                        <td>/sale.html</td>
+                                        <td>6651</td>
+                                        <td>21.3%</td><td>32.3%</td>
+                                        <td><button type="button" style="width:45%;" id="edit_btn" value='{{organization.id}}' class="btn btn-success edit_btn">Edit</button>
+                                        <button type="button" style="width:45%;" id="remove_btn" value='{{organization.id}}' class="btn btn-info remove_btn">Remove</button></td>
                                     </tr>
                                 </tbody>
                             </table>
