@@ -3,11 +3,12 @@ from django.conf.urls import patterns, include, url
 
 from django.contrib import admin
 #admin.autodiscover()
-from schoolapp import views
+from schoolapp import views, web_views
 
 from django.conf.urls import url, include
 from schoolapp.models import User
 from rest_framework import routers, serializers, viewsets
+from django.contrib.auth.decorators import login_required
 
 # Serializers define the API representation.
 class UserSerializer(serializers.HyperlinkedModelSerializer):
@@ -29,9 +30,32 @@ urlpatterns = patterns('',
     url(r'^api/v1/account/signup', views.AccountSignUp.as_view()),
     url(r'^api/v1/account/login', views.AccountLogin.as_view()),
     url(r'^api/v1/attendance', views.Attendance.as_view()),
+    url(r'^api/v1/organization/delete', views.OrganizationDeleteView.as_view()),
     url(r'^api/v1/organization', views.OrganizationView.as_view()),
     url(r'^api/v1/group', views.GroupView.as_view()),
     url(r'^api/v1/pin', views.AccountPinValidation.as_view()),
+    url(r'^login/', web_views.login_view),
+    url(r'^logout/', web_views.logout_view),
+    url(r'^signup/', web_views.SignUpView.as_view()),
+    url(r'^index/', views.IndexView.as_view()),
+
+    url(r'^dashboard/blank/', views.DashboardBlankView.as_view()),
+    url(r'^dashboard/bootel/', views.DashboardBootElView.as_view()),
+    url(r'^dashboard/bootgrid/', views.DashboardBootGridView.as_view()),
+    url(r'^dashboard/charts/', views.DashboardChartsView.as_view()),
+    url(r'^dashboard/forms/', views.DashboardFormsView.as_view()),
+    url(r'^dashboard/rtl/', views.DashboardRtlView.as_view()),
+    url(r'^dashboard/tables/', views.DashboardTablesView.as_view()),
+    url(r'^student/', web_views.StudentView.as_view()),
+    url(r'^teacher/', web_views.TeacherView.as_view()),
+    url(r'^class/', web_views.GroupView.as_view()),
+    url(r'^organization/(.*)/', login_required(web_views.OrganizationView.as_view(), login_url='/login/')),
+    url(r'^organization/', login_required(web_views.OrganizationView.as_view(), login_url='/login/')),
+    url(r'^group/(.*)/', login_required(web_views.GroupView.as_view(), login_url='/login/')),
+    url(r'^group/', login_required(web_views.GroupView.as_view(), login_url='/login/')),
+    url(r'^group/delete/(.*)/', login_required(web_views.GroupDeleteView.as_view(), login_url='/login/')),
+    url(r'^dashboard/', login_required(views.DashboardView.as_view(), login_url='/login/')),
+
 
     url(r'^api-auth/', include('rest_framework.urls', namespace='rest_framework')),
 

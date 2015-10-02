@@ -40,6 +40,7 @@ class Organization(Document):
     state = StringField(max_length=20)
     country = StringField()
     address = StringField(max_length=50)
+    user = ReferenceField('User')
 
 
 class Student(Document):
@@ -47,6 +48,8 @@ class Student(Document):
     roll_no = IntField(unique_with='group')
     parents = ListField(ReferenceField(User))
     group = ReferenceField('Group')
+    organization=ReferenceField('Organization')
+
     meta={
         'indexes':['roll_no', 'parents']
     }

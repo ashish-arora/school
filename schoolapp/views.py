@@ -29,6 +29,10 @@ from django.core.cache import cache
 import bson, base64, random, os
 BASE64_URLSAFE="-_"
 from school.settings import REDIS_CONN as cache
+from django.shortcuts import render_to_response
+from django.template.context import RequestContext
+from rest_framework.authentication import SessionAuthentication, BasicAuthentication
+from rest_framework.permissions import IsAuthenticated
 
 
 logger = log.Logger.get_logger(__file__)
@@ -565,4 +569,111 @@ class OrganizationView(APIView):
             serializer = OrganizationSerializer(organizations, many=True)
             return JSONResponse(serializer.data, status=200)
 
+class OrganizationDeleteView(APIView):
+
+    def post(self, request):
+        """
+        Create Organization
+
+        ---
+        # YAML (must be separated by `---`)
+
+        type:
+            name:
+                required: true
+                type: string
+            city:
+                required: true
+                type: string
+            state:
+                required: true
+                type: string
+            country:
+                required: true
+                type: string
+            address:
+                required: true
+                type: string
+
+        serializer: OrganizationSerializer
+        omit_serializer: false
+
+        parameters_strategy: merge
+        omit_parameters:
+            - path
+
+        responseMessages:
+            - code: 200
+              message: Successfully Created the Organization
+            - code: 400
+              message: Bad Request
+        """
+        organization_id = request.POST.get('organization_id')
+        if not organization_id:
+            raise ValidationError("Required parameter was not there")
+        try:
+            organization = Organization.objects.get(id=organization_id)
+            organization.delete()
+        except Exception, ex:
+            logger.error("Error occurred while deleting organization: id: %s, %s" % (organization_id, str(ex)))
+            raise APIException("Error occurred while deleting organization")
+        else:
+            return JSONResponse({"stat":"ok"})
+
+
+
+class IndexView(APIView):
+
+    #@authenticate_user
+    def get(self, request):
+        return render_to_response("index.html", {}, context_instance=RequestContext(request))
+
+class DashboardView(APIView):
+    #@authenticate_user
+    def get(self, request):
+        return render_to_response("dashboard/index.html", {}, context_instance=RequestContext(request))
+
+class DashboardBlankView(APIView):
+    #@authenticate_user
+    def get(self, request):
+        return render_to_response("dashboard/blank-page.html", {}, context_instance=RequestContext(request))
+
+class DashboardBootElView(APIView):
+    #@authenticate_user
+    def get(self, request):
+        return render_to_response("dashboard/base.html", {}, context_instance=RequestContext(request))
+
+class StudentView(APIView):
+    authentication_classes = (SessionAuthentication, BasicAuthentication)
+    permission_classes = (IsAuthenticated,)
+
+    #@authenticate_user
+    def get(self, request):
+        return render_to_response("dashboard/student.html", {}, context_instance=RequestContext(request))
+
+class DashboardBootGridView(APIView):
+    #@authenticate_user
+    def get(self, request):
+        return render_to_response("dashboard/bootstrap-grid.html", {}, context_instance=RequestContext(request))
+
+
+class DashboardChartsView(APIView):
+    #@authenticate_user
+    def get(self, request):
+        return render_to_response("dashboard/charts.html", {}, context_instance=RequestContext(request))
+
+class DashboardFormsView(APIView):
+    #@authenticate_user
+    def get(self, request):
+        return render_to_response("dashboard/forms.html", {}, context_instance=RequestContext(request))
+
+class DashboardRtlView(APIView):
+    #@authenticate_user
+    def get(self, request):
+        return render_to_response("dashboard/index-rtl.html", {}, context_instance=RequestContext(request))
+
+class DashboardTablesView(APIView):
+    #@authenticate_user
+    def get(self, request):
+        return render_to_response("dashboard/tables.html", {}, context_instance=RequestContext(request))
 

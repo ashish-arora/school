@@ -10,10 +10,11 @@ class GroupSerializer(DocumentSerializer):
         fields = ('name', 'organization', 'members', 'owner')
 
 class OrganizationSerializer(DocumentSerializer):
+    user = serializers.StringRelatedField(many=True)
 
     class Meta:
         model=Organization
-        fields = ('name', 'city', 'state', 'country', 'address')
+        fields = ('name', 'city', 'state', 'country', 'user', 'address')
 
 
 class UserSerializer(DocumentSerializer):
@@ -21,7 +22,7 @@ class UserSerializer(DocumentSerializer):
 
     class Meta:
         model=User
-        fields = ('name', 'msisdn', 'devices', 'country', 'token', 'type', 'organization', 'group', 'md', 'ts')
+        fields = ('name', 'msisdn', 'devices', 'country', 'token', 'type', 'group', 'md', 'ts')
 
 class UserLoginSerializer(DocumentSerializer):
 
@@ -36,7 +37,8 @@ class AttendanceSerializer(DocumentSerializer):
         fields = ('student', 'ts', 'present')
 
 class StudentSerializer(DocumentSerializer):
+    organization = serializers.StringRelatedField(many=True)
 
     class Meta:
         model=Student
-        fields = ('name', 'roll_no', 'parents', 'group')
+        fields = ('name', 'roll_no', 'parents', 'group', 'organization')
