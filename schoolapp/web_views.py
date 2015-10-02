@@ -62,7 +62,6 @@ class GroupView(View):
 
     def get(self, request):
         # <view logic>
-        import ipdb;ipdb.set_trace()
         groups = Group.objects.filter(owner=request.user)
         organizations = request.user.organization
         owners = CustomUser.objects.filter(type=TEACHER, organization__in=organizations)
