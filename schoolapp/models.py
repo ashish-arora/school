@@ -59,13 +59,12 @@ class Organization(Document):
     state = StringField(max_length=20)
     country = StringField()
     address = StringField(max_length=50)
-    user = ReferenceField('User')
 
 
 class Student(Document):
     name=StringField(max_length=20)
     roll_no = IntField(unique_with='group')
-    parents = ListField(ReferenceField(User))
+    parents = ListField(ReferenceField(CustomUser))
     group = ReferenceField('Group')
     organization=ReferenceField('Organization')
 
@@ -77,7 +76,7 @@ class Group(Document):
     name = StringField(max_length=20)
     organization = ReferenceField(Organization)
     members = ListField(ReferenceField(Student))
-    owner = ListField(ReferenceField(User))
+    owner = ListField(ReferenceField(CustomUser))
 
     meta={
         'indexes': ['owner']

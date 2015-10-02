@@ -83,11 +83,11 @@ class GroupView(View):
         except Exception, ex:
             logger.error("Error: %s" %(str(ex)))
             errors.append("Required parameter was not there")
-            request.POST.set("post_type", post_type)
+            request.POST.post_type = post_type
             return render(request, self.template_name, {'errors':errors})
         if not name or not organization_id:
             errors.append("Required parameter was not there")
-            request.POST.set("post_type", post_type)
+            request.POST.post_type = post_type
             return render(request, self.template_name, {'errors':errors})
         if members:
             try:
