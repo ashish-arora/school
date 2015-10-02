@@ -9,6 +9,8 @@ from django.http import HttpResponseRedirect
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import login, logout
 from mongoengine.django.auth import User
+from schoolapp.models import CustomUser
+from mongoengine.django.mongo_auth import models
 from mongoengine.queryset import DoesNotExist
 from schoolapp.models import Organization, Student, Group
 import bson, base64, random, os
@@ -60,12 +62,11 @@ class GroupView(View):
 
     def get(self, request):
         # <view logic>
-
         groups = Group.objects.filter(owner=request.user)
-        organization = Organization.objects.filter(user=request.user)
-        owners = User.objects.filter(type=TEACHER, organization=organization)
-        members = Student.objects.filter(organization=organization)
-        return render(request, self.template_name, {"groups":groups, "organization":organization, "owners":owners, "members":members})
+        organizations = request.user.organization
+        owners = CustomUser.objects.filter(type=TEACHER, organization__in=organizations)
+        members = Student.objects.filter(organization__in=organizations)
+        return render(request, self.template_name, {"groups":groups, "organizations":organizations, "owners":owners, "members":members})
 
     def post(self, request, id=None):
         errors=[]
@@ -231,7 +232,7 @@ def login_view(request):
             password =request.POST.get("password")
             password = 'CYOzgG27aAM='
 
-            user = User.objects.get(username=request.POST.get('username'))
+            user = CustomUser.objects.get(username=request.POST.get('username'))
             if user.check_password('123'):
             #if user:
                 user.backend = 'mongoengine.django.auth.MongoEngineBackend'

@@ -1,4 +1,5 @@
 from mongoengine import *
+from mongoengine.django.auth import User
 import time
 
 ADMIN = 1
@@ -17,7 +18,24 @@ VALID_COUNTRY = ['+91']
 
 VALID_ATTENDANCE_TYPES = [PRESENT, ABSENT]
 
-class User(Document):
+class CustomUser(User):
+    msisdn = StringField(max_length=15, unique_with='type', required=True)
+    devices = DictField(required=False)
+    country = StringField(max_length=20)
+    token = StringField(max_length=20)
+    type= IntField(required=True, choices=USER_TYPE)
+    organization = ListField(ReferenceField('Organization'))
+    md = DictField(default={})
+    ts = IntField(default=int(time.time()))
+
+    meta = {
+        'allow_inheritance': True,
+        'indexes': [
+            {'fields': ['username'], 'unique': True, 'sparse': True}, 'msisdn', 'type'
+        ]
+    }
+
+"""class User(Document):
     name = StringField(max_length=40, required=True)
     msisdn = StringField(max_length=15, unique_with='type', required=True)
     devices = DictField(required=False)
@@ -33,6 +51,7 @@ class User(Document):
         'indexes':['msisdn', 'type']
 
     }
+"""
 
 class Organization(Document):
     name = StringField(max_length=20)
