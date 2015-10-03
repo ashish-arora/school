@@ -26,7 +26,7 @@
                 $("#inputname").val($("#" + group_id).find('td').eq(0).html());
                 $("#modal_form").attr('action', '/group/' + group_id + '/');
                 $("#errors_div").val('');
-                $("#myModalLabel").text("Edit Group");
+                $("#myModalLabel").text("Edit Class");
                 $('#myModal').modal('show');
             });
 
@@ -45,10 +45,11 @@
             });
 
             $("#add_group").click(function(){
+                console.log("inside add");
                 $("#modal_form").attr('action', '/group/');
                 $("#inputname").val('');
                 $("#errors_div").html('');
-                $("#myModalLabel").text("Add group");
+                $("#myModalLabel").text("Add Class");
                 $('#myModal').modal('show');
             });
         });
@@ -93,7 +94,9 @@
                             <div class=".col-lg-4">
                                 <!--<button class="btn" id="add_Class" style="margin-left: 15%;color: #FFF;background-color: #1A56A0;width: 17%;">Add Class</button>-->
                                 <!-- Button trigger modal -->
-                                <button type="button" class="btn btn-primary btn-md" style="margin-left: 15%; width:17%;" data-toggle="modal" data-target="#myModal">Add Class
+                                <!--<button type="button" class="btn btn-primary btn-md" style="margin-left: 15%; width:17%;" data-toggle="modal" data-target="#myModal">Add Class
+                                </button>-->
+                                <button type="button" id="add_group" class="btn btn-primary btn-md" style="margin-left: 15%; width:17%;">Add Class
                                 </button>
 
 <!-- Modal -->
