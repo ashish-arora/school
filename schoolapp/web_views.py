@@ -19,7 +19,7 @@ from utils import log
 from forms import OrganizationForm
 import json
 from models import TEACHER
-from utils.helpers import get_groups
+from utils.helpers import get_groups,get_students
 
 
 logger = log.Logger.get_logger(__file__)
@@ -29,14 +29,18 @@ class StudentView(View):
 
     def get(self, request):
         # <view logic>
-        return render(request, self.template_name, {})
+        organizations = request.user.organization
+        groups = get_groups(request.user, organizations)
+        students = get_students(organizations)
+        return render(request, self.template_name, {"groups":groups,"students":students})
 
-    def post(self, request):
-        import ipdb;ipdb.set_trace()
+    def post(self, request,id=None):
         errors=[]
         message=None
         post_type='post'
+        grp = None
         organization = request.user.organization
+        import ipdb; ipdb.set_trace()
         if self.args:
             id=self.args[0]
             post_type='update'
@@ -44,26 +48,47 @@ class StudentView(View):
             first_name = request.POST.get('first_name_modal')
             last_name = request.POST.get('last_name_modal')
             roll_no = request.POST.get('roll_no_modal')
-            class_value = request.POST.get('class_value_modal')
+            groupid = request.POST.get('class_value_modal')
+            grp = Group.objects.get(id=groupid)
         except Exception, ex:
             logger.error("Error: %s" %(str(ex)))
             errors.append("Required parameter was not there")
             request.POST.post_type = post_type
             return render(request, self.template_name, {'errors':errors})
 
-        if (first_name or last_name) and roll_no and class_value:
-            try:
-                student = Student.objects.create(first_name=first_name, last_name=last_name, roll_no=roll_no, organization=organization)
-            except Exception, ex:
-                #request.POST.set("post_type", post_type)
-                #request.POST.post_type = post_type
-                logger.error("Error occurred while creating organization doc: %s, first_name: %s, last_name:%s, roll_no: %s, class_value:%s" % (str(ex), first_name, last_name, roll_no,class_value ))
-                errors.append("Error while saving data, please try again")
+        if (first_name or last_name) and roll_no and groupid:
+            if id:
+                # to handle update request
+                try:
+                    student = Student.objects.get(id=id)
+                except Exception, ex:
+                    logger.error("Organization does not exist :%s" % id)
+                    errors.append("Error occurred while updating record, Please try again")
+                    request.POST.post_type = post_type
+                else:
+                    student.first_name = first_name
+                    student.last_name = last_name
+                    student.roll_no = roll_no
+                    student.group = grp
+                    student.save()
+                    message = "Student information has been successfully updated"
             else:
-                message = "Organization has been successfully created"
+                try:
+                    org = organization[0]
+                    student = Student.objects.create(first_name=first_name, last_name=last_name, roll_no=roll_no, group=grp, organization=org)
+                except Exception, ex:
+                    #request.POST.set("post_type", post_type)
+                    #request.POST.post_type = post_type
+                    logger.error("Error occurred while creating Student doc: %s, first_name: %s, last_name:%s, roll_no: %s, class_value:%s" % (str(ex), first_name, last_name, roll_no,groupid ))
+                    errors.append("Error while saving data, please try again")
+                else:
+                    message = "Student profile has been successfully created"
         else:
             errors.append("Required parameter was not there")
-        return render(request, self.template_name, {"errors": errors, "message": message, 'organization':organization})
+            request.POST.post_type = post_type
+        groups = get_groups(request.user, organization)
+        students = get_students(organization)
+        return render(request, self.template_name, {"errors": errors, "message": message, 'organization':organization,'groups':groups,"students":students})
 
 
 class TeacherView(View):
@@ -192,7 +217,6 @@ class OrganizationView(View):
     def get(self, request):
         # <view logic>
         errors=[]
-
         try:
             organizations = Organization.objects.all()
         except Exception, ex:

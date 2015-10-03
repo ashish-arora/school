@@ -10,13 +10,21 @@
                 $("#firstnamemodal").val('{{request.POST.first_name_modal}}');
                 $("#lastnamemodal").val('{{request.POST.last_name_modal}}');
                 $("#rollnomodal").val('{{request.POST.roll_no_modal}}');
-                $("#classvaluesmodal").val('{{request.POST.class_value_modal}}');
+                $("#classvaluesmodal").val('{{request.POST.cflass_value_modal}}');
                 $("#classvalues option").each(function()
                 {
                     var option = $('<option />');
                     option.attr('value', this.value).text(this.label);
                     $('#classvaluesmodal').append(option);
                 });
+                $("#modal_form").attr('action', '/student/');
+
+                {% if request.POST.post_type == "post" %}
+                    $("#modal_form").attr('action', '/student/');
+                {% else %}
+                    $("#modal_form").attr('action', '/student/' + '{{student.id}}' + '/');
+                {% endif %}
+
 
             {% endif %}
 
@@ -25,22 +33,22 @@
             {% endif %}
 
             $(".edit_btn").click(function() {
-                var organization_id = $(this).attr("value");
-                console.log("Organization id is " + organization_id);
+                var student_id = $(this).attr("value");
+                console.log("Student id is " + student_id);
+                $('#classvaluesmodal').find('option').remove().end()
                 $("#classvalues option").each(function()
                 {
                     var option = $('<option />');
                     option.attr('value', this.value).text(this.label);
                     $('#classvaluesmodal').append(option);
                 });
-
-
-                $("#inputname").val($("#" + organization_id).find('td').eq(0).html());
-                $("#inputcity").val($("#" + organization_id).find('td').eq(1).html());
-                $("#inputstate").val($("#" + organization_id).find('td').eq(2).html());
-                $("#inputcountry").val($("#" + organization_id).find('td').eq(3).html());
-                $("#inputaddress").val($("#" + organization_id).find('td').eq(4).html());
-                $("#modal_form").attr('action', '/organization/' + organization_id + '/');
+                $("#firstnamemodal").val($("#" + student_id).find('td').eq(0).html());
+                $("#lastnamemodal").val($("#" + student_id).find('td').eq(1).html());
+                $("#rollnomodal").val($("#" + student_id).find('td').eq(2).html());
+                var s=$("#" + student_id).find('td').eq(3).attr('id')
+                alert(s)
+                $("#classvaluesmodal").val(s);
+                $("#modal_form").attr('action', '/student/' + student_id + '/');
                 $("#error_messages").val('');
                 $("#myModalLabel").text("Edit Student");
                 $('#myModal').modal('show');
@@ -50,17 +58,17 @@
             $("#add_student").click(function(){
                 console.log("Add student");
                 $("#modal_form").attr('action', '/student/');
+
+                $("#firstnamemodal").val('');
+                $("#lastnamemodal").val('');
+                $("#rollnomodal").val('');
+                $('#classvaluesmodal').find('option').remove().end()
                 $("#classvalues option").each(function()
                 {
                     var option = $('<option />');
                     option.attr('value', this.value).text(this.label);
                     $('#classvaluesmodal').append(option);
                 });
-                $("#inputname").val('');
-                $("#inputcity").val('');
-                $("#inputstate").val('');
-                $("#inputcountry").val('');
-                $("#inputaddress").val('');
                 $("#abc").html('');
                 $("#myModalLabel").text("Add Student");
                 $('#myModal').modal('show');
@@ -110,11 +118,9 @@
                         <div class="form-group">
                             <label for="classvalues">Class</label>
                             <select class="form-control" id="classvalues">
-                              <option>9A</option>
-                              <option>8B</option>
-                              <option>8C</option>
-                              <option>2D</option>
-                              <option>3F</option>
+                                {% for group in groups %}
+                                    <option value={{group.id}}>{{group.name}}</option>
+                                {% endfor %}
                             </select>
                          </div>
                           <button type="submit" class="btn btn-primary">Search</button>
@@ -208,27 +214,17 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr>
-                                        <td>/index.html</td>
-                                        <td>1ssfsdsdfs5</td>
-                                        <td>32.3%</td><td>32.3%</td>
-                                        <td><button type="button" style="width:45%;" id="edit_btn" value='{{organization.id}}' class="btn btn-success edit_btn">Edit</button>
-                                        <button type="button" style="width:45%;" id="remove_btn" value='{{organization.id}}' class="btn btn-info remove_btn">Remove</button></td>
-                                    </tr>
-                                    <tr>
-                                        <td>/about.html</td>
-                                        <td>261</td><td>32.3%</td>
-                                        <td>33.3%</td>
-                                        <td><button type="button" style="width:45%;" id="edit_btn" value='{{organization.id}}' class="btn btn-success edit_btn">Edit</button>
-                                        <button type="button" style="width:45%;" id="remove_btn" value='{{organization.id}}' class="btn btn-info remove_btn">Remove</button></td>
-                                    </tr>
-                                    <tr>
-                                        <td>/sales.html</td>
-                                        <td>6651</td>
-                                        <td>21.3%</td><td>32.3%</td>
-                                        <td><button type="button" style="width:45%;" id="edit_btn" value='{{organization.id}}' class="btn btn-success edit_btn">Edit</button>
-                                        <button type="button" style="width:45%;" id="remove_btn" value='{{organization.id}}' class="btn btn-info remove_btn">Remove</button></td>
-                                    </tr>
+                                    {% for student in students %}
+                                        <tr id='{{student.id}}'>
+                                        <td>{{student.first_name}}</td>
+                                        <td>{{student.last_name}}</td>
+                                        <td>{{student.roll_no}}</td>
+                                        <td id="{{student.group.id}}">{{student.group.name}}</td>
+
+                                            <td><button type="button" style="width:45%;"  id="edit_btn" value='{{student.id}}' class="btn btn-success edit_btn">Edit</button>
+                                            <button type="button" style="width:45%;" id="remove_btn" value='{{student.id}}' class="btn btn-info remove_btn">Remove</button></td>
+                                        </tr>
+                                    {% endfor %}
                                 </tbody>
                             </table>
                         </div>

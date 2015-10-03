@@ -199,4 +199,7 @@ def get_groups(user, organization):
         groups = Group.objects.filter(owner=user)
     return groups
 
+def get_students(organization):
+    return Student.objects.filter(organization__in=organization)
+
 
