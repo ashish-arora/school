@@ -62,7 +62,8 @@ class Organization(Document):
 
 
 class Student(Document):
-    name=StringField(max_length=20)
+    first_name=StringField(max_length=20)
+    last_name=StringField(max_length=20)
     roll_no = IntField(unique_with='group')
     parents = ListField(ReferenceField(CustomUser))
     group = ReferenceField('Group')
