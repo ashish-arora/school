@@ -4,6 +4,129 @@
 {% endblock css%}
 
 {% block javascript%}
+    <script>
+        $(window).load(function(){
+            {% if request.POST %}
+                console.log("inside post");
+                $("#inputname").val('{{request.POST.name}}');
+                $("#inputmsisdn").val('{{request.POST.msisdn}}');
+                $("#inputemail").val('{{request.POST.email}}');
+                $("#inputusername").val('{{request.POST.username}}');
+                $("#inputpassword").val('{{request.POST.password}}');
+                {% if request.POST.post_type == "post" %}
+                    $("#modal_form").attr('action', '/manageuser/teacher/');
+                {% else %}
+                    $("#modal_form").attr('action', '/manageuser/teacher/' + '{{teacher.id}}' + '/');
+                {% endif %}
+            {% endif %}
+
+            {% if errors %}
+                $('#myModal').modal('show');
+            {% endif %}
+
+            $(".edit_btn").click(function() {
+                var teacher_id = $(this).attr("value");
+                console.log("teacher id is " + teacher_id);
+                $("#inputname").val($("#" + teacher_id).find('td').eq(0).html());
+                $("#inputmsisdn").val($("#" + teacher_id).find('td').eq(1).html());
+                $("#inputemail").val($("#" + teacher_id).find('td').eq(2).html());
+                $("#inputusername").val($("#" + teacher_id).find('td').eq(5).html());
+                $("#modal_form").attr('action', '/manageuser/teacher/' + teacher_id + '/');
+                $("#error_messages").val('');
+                $("#myModalLabel").text("Edit Teacher");
+                $('#myModal').modal('show');
+            });
+
+            $(".remove_btn").click(function(){
+                var teacher_id = $(this).attr("value");
+                console.log("teacher id is " + teacher_id);
+                $.post("/api/v1/teacher/delete/",{"teacher_id": teacher_id, "csrfmiddlewaretoken": '{{csrf_token}}'}, function(data, status){
+                    alert("Successfully removed the teacher");
+                    $('#' + teacher_id).remove();
+                })
+
+                .fail(function(){
+                   alert("Error occurred while deleting teacher");
+                });
+
+            });
+
+            $("#add_teacher").click(function(){
+                $("#modal_form").attr('action', '/manageuser/teacher/');
+                $("#inputname").val('');
+                $("#inputemail").val('');
+                $("#inputmsisdn").val('');
+                $("#inputusername").val('');
+                $("#inputpassword").val('');
+                $("#abc").html('');
+                $("#myModalLabel").text("Add Teacher");
+                $('#myModal').modal('show');
+            });
+
+            function get_html_group_data(list_data){
+                var htm = "";
+                for (i = 0; i < list_data.length; i++) {
+                    htm += "<a class='btn btn-info btn-sm org-show' role='button' style='margin:3px 3px 3px 3px;'>" + list_data[i] + "</a>";
+                };
+                return htm;
+            }
+
+            $(".org-show").click(function(){
+                console.log("inside org show");
+                var organization_id = $(this).attr("value");
+                console.log(organization_id);
+                console.log(organization_data[organization_id]);
+                console.log(organization_data[organization_id]['name']);
+                $("#inputorganizationname").val(organization_data[organization_id]['name']);
+                $("#inputcity").val(organization_data[organization_id]['city']);
+                $("#inputaddress").val(organization_data[organization_id]['address']);
+                $("#inputstate").val(organization_data[organization_id]['state']);
+                $("#inputcountry").val(organization_data[organization_id]['country']);
+                $('#myOrganizationModal').modal('show');
+            });
+
+            $(".group-show").click(function(){
+                console.log(" inside group show");
+                var group_id = $(this).attr("value");
+                console.log(group_data[group_id]);
+                $("#group_name").val(group_data[group_id]['name']);
+                $("#organization_name").val(group_data[group_id]['organization']);
+                $("#modal_member_data").html(get_html_group_data(group_data[group_id]['members']));
+                console.log(get_html_group_data(group_data[group_id]['owners']));
+                $("#modal_owner_data").html(get_html_group_data(group_data[group_id]['owners']));
+                $('#myGroupModal').modal('show');
+            });
+
+            var organization_data = {};
+            var group_data = {};
+            {% for teacher, groups in teachers %}
+                {% for organization in teacher.organization %}
+                    organization_data['{{organization.id}}'] = {};
+                    organization_data['{{organization.id}}']['name'] = '{{organization.name}}';
+                    organization_data['{{organization.id}}']['state'] = '{{organization.state}}';
+                    organization_data['{{organization.id}}']['country'] = '{{organization.country}}';
+                    organization_data['{{organization.id}}']['address'] = '{{organization.address}}';
+                    organization_data['{{organization.id}}']['city'] = '{{organization.city}}';
+                {% endfor %}
+                {% for group in groups %}
+                    group_data['{{group.id}}'] = {};
+                    group_data['{{group.id}}']['name'] = '{{group.name}}';
+                    group_data['{{group.id}}']['organization'] = '{{group.organization.name}}';
+                    group_data['{{group.id}}']['members']=[];
+                    group_data['{{group.id}}']['owners']=[];
+                    {% for member in group.members %}
+                        group_data['{{group.id}}']['members'].push('{{member.name}}');
+                    {% endfor %}
+                    {% for owner in group.owner %}
+                        group_data['{{group.id}}']['owners'].push('{{owner.first_name}}');
+                    {% endfor %}
+                {% endfor %}
+            {% endfor %}
+            console.log("organization data" + organization_data);
+            console.log("group data" + group_data);
+        });
+    </script>
+
 {% endblock javascript%}
 
 {% block content %}
@@ -20,7 +143,7 @@
                         </h1>
                         <ol class="breadcrumb">
                             <li>
-                                <i class="fa fa-dashboard"></i>  <a href="/dashboard/">Dashboard</a>
+                                <i class="fa fa-dashboard"></i>  <a href="index.html">Dashboard</a>
                             </li>
                             <li class="active">
                                 <i class="fa fa-file"></i> Teachers
@@ -28,6 +151,11 @@
                         </ol>
                     </div>
                 </div>
+                {% if message %}
+                    <div class="alert alert-success">
+                     {{message}}
+                    </div>
+                {% endif %}
                 <div class="row">
                             <div class="col-lg-8">
                                 <ul class="nav nav-tabs">
@@ -37,9 +165,11 @@
                                 </ul>
                             </div>
                             <div class=".col-lg-4">
-                                <!--<button class="btn" id="add_Teacher" style="margin-left: 15%;color: #FFF;background-color: #1A56A0;width: 17%;">Add Teacher</button>-->
+                                <!--<button class="btn" id="add_teacher" style="margin-left: 15%;color: #FFF;background-color: #1A56A0;width: 17%;">Add teacher</button>-->
                                 <!-- Button trigger modal -->
-                                <button type="button" class="btn btn-primary btn-md" style="margin-left: 15%; width:17%;" data-toggle="modal" data-target="#myModal">Add Teacher
+                                <!--<button type="button" id="add_teacher" class="btn btn-primary btn-md" style="margin-left: 15%; width:17%;" data-toggle="modal" data-target="#myModal">Add teacher
+                                </button>-->
+                                <button type="button" id="add_teacher" class="btn btn-primary btn-md" style="margin-left: 15%; width:17%;">Add teacher
                                 </button>
 
 <!-- Modal -->
@@ -51,31 +181,71 @@
         <h4 class="modal-title" id="myModalLabel">Add Teacher Info</h4>
       </div>
       <div class="modal-body">
-        <form class="form-horizontal">
+        <form class="form-horizontal" id="modal_form" method="post">
+            {% csrf_token %}
+            <div id="abc">
+            {% if errors %}
+                <div id="error_messages"class="alert alert-danger">
+                    {% for error in errors %}
+                        <span>{{error}}</span>
+                    {% endfor %}
+                </div>
+            {% endif %}
+            </div>
             <div class="form-group">
                 <label for="inputEmail3" class="col-sm-2 control-label">Name</label>
                 <div class="col-sm-10">
-                    <input type="email" class="form-control" id="inputName" placeholder="Name">
+                    <input type="text" class="form-control" name="name" id="inputname" placeholder="Name">
                 </div>
             </div>
             <div class="form-group">
-                <label for="inputEmail3" class="col-sm-2 control-label">Roll No</label>
+                <label for="inputEmail3" class="col-sm-2 control-label">Msisdn</label>
                 <div class="col-sm-10">
-                    <input type="email" class="form-control" id="input_rollno" placeholder="Roll No">
+                    <input type="text" class="form-control" id="inputmsisdn" name="msisdn" placeholder="Msisdn">
                 </div>
             </div>
             <div class="form-group">
                 <label for="inputEmail3" class="col-sm-2 control-label">Email</label>
                 <div class="col-sm-10">
-                    <input type="email" class="form-control" id="inputEmail3" placeholder="Email">
+                    <input type="text" class="form-control" id="inputemail" name="email" placeholder="Email">
                 </div>
             </div>
             <div class="form-group">
-                <label for="inputPassword3" class="col-sm-2 control-label">Password</label>
+                <label for="group" class="col-sm-2 control-label">Organization</label>
                 <div class="col-sm-10">
-                    <input type="password" class="form-control" id="inputPassword3" placeholder="Password">
+                    <select class="form-control" name="organization_id" id="inputorganization">
+                        {% for organization in organizations %}
+                            <option value="{{organization.id}}">{{organization.name}}</option>
+                        {% endfor %}
+                    </select>
                 </div>
             </div>
+            <div class="form-group">
+                <label for="inputPassword3" class="col-sm-2 control-label">Groups</label>
+                <div class="col-sm-10">
+                    <select multiple class="form-control" name="group_id[]" id="inputgroup">
+                        {% for group in groups %}
+                            <option value="{{group.id}}">{{group.name}}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+
+            <div class="form-group">
+                <label for="inputPassword3" class="col-sm-2 control-label">Username</label>
+                <div class="col-sm-10">
+                    <input type="username" class="form-control" name="username" id="inputusername" placeholder="Username">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="inputPassword3" class="col-sm-2 control-label">Password</label>
+                <div class="col-sm-10">
+                    <input type="password" class="form-control" name="password" id="inputpassword" placeholder="Password">
+                </div>
+            </div>
+
             <div class="form-group">
                 <div class="col-sm-offset-2 col-sm-10">
                     <div class="checkbox">
@@ -87,7 +257,7 @@
             </div>
             <div class="form-group">
                 <div class="col-sm-offset-2 col-sm-10">
-                    <button type="submit" class="btn btn-default">Sign in</button>
+                    <button type="submit" class="btn btn-primary">Submit</button>
                 </div>
             </div>
         </form>
@@ -98,62 +268,148 @@
       </div>
     </div>
   </div>
-</div><!-- Modal --></div>
+</div><!-- Modal -->
+
+<!-- Group Modal -->
+<div class="modal fade" id="myGroupModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title" id="myModalLabel">Class Info</h4>
+      </div>
+      <div class="modal-body">
+        <form class="form-horizontal" method="post">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="inputEmail3" class="col-sm-2 control-label">Name</label>
+                <div class="col-sm-10">
+                    <input type="text" name="group_name" class="form-control" id="group_name" placeholder="Name" readonly>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="inputEmail3" class="col-sm-2 control-label">Organization</label>
+                <div class="col-sm-10">
+                    <input type="text" name="organization_name" class="form-control" id="organization_name" placeholder="Organization" readonly>
+                </div>
+            </div>
+
+
+            <div class="form-group">
+                <label for="inputEmail3" class="col-sm-2 control-label">Members</label>
+                <div class="col-sm-10" id="modal_member_data">
+                    <input type="text" name="member_name" class="form-control" id="member_name" placeholder="Members" readonly>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="inputPassword3" class="col-sm-2 control-label">Owners</label>
+                <div class="col-sm-10" id="modal_owner_data">
+                    <input type="text" name="owner_name" class="form-control" id="owner_name" placeholder="Owner" readonly>
+                </div>
+            </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div><!-- Group Modal -->
+
+<!-- Organization Modal -->
+<div class="modal fade" id="myOrganizationModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title" id="myOrganizationLabel">Organization Info</h4>
+      </div>
+      <div class="modal-body">
+        <form class="form-horizontal" id="modal_form" method="post">
+            {% csrf_token %}
+
+            <div class="form-group">
+                <label for="inputEmail3" class="col-sm-2 control-label">Name</label>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" name="name" id="inputorganizationname" placeholder="Name" readonly>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="inputEmail3" class="col-sm-2 control-label">City</label>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" id="inputcity" name="city" placeholder="City"readonly>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="inputEmail3" class="col-sm-2 control-label">State</label>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" id="inputstate" name="state" placeholder="State" readonly>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="inputPassword3" class="col-sm-2 control-label">Address</label>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" name="address" id="inputaddress" placeholder="Address" readonly>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="inputPassword3" class="col-sm-2 control-label">Country</label>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" name="country" id="inputcountry" placeholder="Country" readonly>
+                </div>
+            </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div><!-- Organization Modal -->
+
+
+
+                            </div>
                         </div>
                         <div class="row">
                         <div class="table-responsive col">
                             <table class="table table-bordered table-hover table-striped">
                                 <thead>
                                     <tr>
-                                        <th>Roll No</th>
                                         <th>Name</th>
+                                        <th>Msisdn</th>
                                         <th>Email</th>
-                                        <th>Password</th>
+                                        <th>Organization</th>
+                                        <th>Groups</th>
+                                        <th>Username</th>
+                                        <th>Action</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr>
-                                        <td>/index.html</td>
-                                        <td>1265</td>
-                                        <td>32.3%</td>
-                                        <td>$321.33</td>
-                                    </tr>
-                                    <tr>
-                                        <td>/about.html</td>
-                                        <td>261</td>
-                                        <td>33.3%</td>
-                                        <td>$234.12</td>
-                                    </tr>
-                                    <tr>
-                                        <td>/sales.html</td>
-                                        <td>665</td>
-                                        <td>21.3%</td>
-                                        <td>$16.34</td>
-                                    </tr>
-                                    <tr>
-                                        <td>/blog.html</td>
-                                        <td>9516</td>
-                                        <td>89.3%</td>
-                                        <td>$1644.43</td>
-                                    </tr>
-                                    <tr>
-                                        <td>/404.html</td>
-                                        <td>23</td>
-                                        <td>34.3%</td>
-                                        <td>$23.52</td>
-                                    </tr>
-                                    <tr>
-                                        <td>/services.html</td>
-                                        <td>421</td>
-                                        <td>60.3%</td>
-                                        <td>$724.32</td>
-                                    </tr>
-                                    <tr>
-                                        <td>/blog/post.html</td>
-                                        <td>1233</td>
-                                        <td>93.2%</td>
-                                        <td>$126.34</td>
-                                    </tr>
+
+                                    {% for teacher, groups in teachers %}
+                                        <tr id='{{teacher.id}}'>
+                                        <td>{{teacher.first_name}}</td>
+                                        <td>{{teacher.msisdn}}</td>
+                                        <td>{{teacher.email}}</td>
+                                        <td>
+                                            {% for organization in teacher.organization %}
+                                                <a class="btn btn-info btn-sm org-show" value='{{organization.id}}' role="button">{{organization.name}}</a>
+                                            {% endfor %}
+                                        </td>
+                                        <td>
+                                            {% for group in groups %}
+                                                <a class="btn btn-info btn-sm group-show" value='{{group.id}}' role="button">{{group.name}}</a>
+                                            {% endfor %}
+                                        </td>
+                                        <td>{{teacher.username}}</td>
+                                            <td><button type="button" style="width:45%;" id="edit_btn" value='{{teacher.id}}' class="btn btn-success edit_btn">Edit</button>
+                                            <button type="button" style="width:45%;" id="remove_btn" value='{{teacher.id}}' class="btn btn-danger remove_btn">Remove</button></td>
+                                        </tr>
+                                    {% endfor %}
+
                                 </tbody>
                             </table>
                         </div>

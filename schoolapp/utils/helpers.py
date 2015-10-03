@@ -2,7 +2,7 @@ __author__ = 'ashish'
 from schoolapp.utils import log
 import time, json
 logging = log.Logger.get_logger(__file__)
-from schoolapp.models import User, Student
+from schoolapp.models import CustomUser, Student
 from schoolapp.models import TEACHER, PARENT, ADMIN
 from mongoengine.errors import *
 import base64, bson
@@ -44,35 +44,47 @@ def get_base64_decode(bson_id):
 def get_base64_encode(object_id):
     return base64.b64encode(object_id.binary, BASE64_URLSAFE)
 
-def create_teacher(name, msisdn, organization, token, groups=[]):
+def create_teacher(name, msisdn, organization, token, username, groups=[], email='', password=''):
     try:
-        user = User.objects.create(name=name, msisdn=msisdn, type=TEACHER, organization=organization, token=token)
+        user = CustomUser(first_name=name, last_name=name, msisdn=msisdn, type=TEACHER, organization=[organization], token=token, username=username)
+        user.set_password(password)
+        user.save()
         for group in groups:
             if user not in group.owner:
                 group.owner.append(user)
                 group.save()
         logging.debug("Created the teacher: %s" % user.id)
         return user.id
-    except NotUniqueError:
-        user=update_teacher(name, msisdn, organization, token, groups)
-        logging.debug("Update the teacher info: %s" %(user.id))
-        return user.id
+    #except NotUniqueError:
+        #user=update_teacher(name, msisdn, organization, token, groups)
+        #logging.debug("Update the teacher info: %s" %(user.id))
+    #    return user.id
     except Exception, ex:
         logging.error("Error occurred while creating/updating teacher, name: %s, msisdn:%s, error:%s" %(name, msisdn, str(ex)))
         raise OperationError("Error occurred while creating/updating teacher, name: %s, msisdn:%s" %(name, msisdn))
 
-def update_teacher(name, msisdn, organization, token, type=TEACHER, groups=[]):
+def update_teacher(teacher, name, msisdn, organization, token, type=TEACHER, groups=[], email='', password=''):
     try:
-        user = User.objects.get(msisdn=msisdn, type=type)
+        #user = CustomUser.objects.get(msisdn=msisdn, type=type)
         #user.groups = list(set(user.groups.append(groups)))
-        user.organization=organization
-        user.token = token
-        user.save()
+        if organization:
+            teacher.organization=organization
+        if token:
+            teacher.token = token
+        if name:
+            teacher.name = name
+        if email:
+            teacher.email = email
+        if password:
+            teacher.password = password
+        if msisdn:
+            teacher.msisdn = msisdn
+        teacher.save()
         for group in groups:
-            if user not in group.owner:
-                group.owner.append(user)
+            if teacher not in group.owner:
+                group.owner.append(teacher)
         group.save()
-        return user
+        return teacher
     except Exception, ex:
         logging.error("Error occurred while updating teacher, name: %s, msisdn:%s, error:%s" %(name, msisdn, str(ex)))
         raise OperationError("Error occurred while updating teacher, name: %s, msisdn:%s" %(name, msisdn))
@@ -116,7 +128,7 @@ def update_parent(name, msisdn, organization, token, students=[]):
 
 def remove_parent_from_student(name, msisdn, organization, token, students=[]):
     try:
-        user = User.objects.get(msisdn=msisdn, type=type)
+        user = CustomUser.objects.get(msisdn=msisdn, type=type)
         for student in students:
             if user in student.parents:
                 student.parents.remove(user)
@@ -180,7 +192,7 @@ def remove_student_from_group(student, group):
 
 def create_admin(name, msisdn, organization, token):
     try:
-        user = User.objects.create(name=name, msisdn=msisdn, type=ADMIN, organization=organization, token=token)
+        user = CustomUser.objects.create(name=name, msisdn=msisdn, type=ADMIN, organization=organization, token=token)
         logging.debug("Created the admin: %s" % user.id)
         return user.id
     except NotUniqueError:
@@ -201,5 +213,8 @@ def get_groups(user, organization):
 
 def get_students(organization):
     return Student.objects.filter(organization__in=organization)
+
+def get_teacher_owner_group(teacher):
+    return Group.objects.filter(owner=teacher)
 
 
