@@ -7,11 +7,34 @@
         <script>
         $(window).load(function(){
             {% if request.POST %}
+                $("#firstnamemodal").val('{{request.POST.first_name_modal}}');
+                $("#lastnamemodal").val('{{request.POST.last_name_modal}}');
+                $("#rollnomodal").val('{{request.POST.roll_no_modal}}');
+                $("#classvaluesmodal").val('{{request.POST.class_value_modal}}');
+                $("#classvalues option").each(function()
+                {
+                    var option = $('<option />');
+                    option.attr('value', this.value).text(this.label);
+                    $('#classvaluesmodal').append(option);
+                });
+
+            {% endif %}
+
+            {% if errors %}
+                $('#myModal').modal('show');
             {% endif %}
 
             $(".edit_btn").click(function() {
                 var organization_id = $(this).attr("value");
                 console.log("Organization id is " + organization_id);
+                $("#classvalues option").each(function()
+                {
+                    var option = $('<option />');
+                    option.attr('value', this.value).text(this.label);
+                    $('#classvaluesmodal').append(option);
+                });
+
+
                 $("#inputname").val($("#" + organization_id).find('td').eq(0).html());
                 $("#inputcity").val($("#" + organization_id).find('td').eq(1).html());
                 $("#inputstate").val($("#" + organization_id).find('td').eq(2).html());
@@ -21,10 +44,18 @@
                 $("#error_messages").val('');
                 $("#myModalLabel").text("Edit Student");
                 $('#myModal').modal('show');
+
             });
 
-            $("#add_organization").click(function(){
-                $("#modal_form").attr('action', '/organization/');
+            $("#add_student").click(function(){
+                console.log("Add student");
+                $("#modal_form").attr('action', '/student/');
+                $("#classvalues option").each(function()
+                {
+                    var option = $('<option />');
+                    option.attr('value', this.value).text(this.label);
+                    $('#classvaluesmodal').append(option);
+                });
                 $("#inputname").val('');
                 $("#inputcity").val('');
                 $("#inputstate").val('');
@@ -65,20 +96,20 @@
                 <div class="row">
                    <form class="form-inline">
                         <div class="form-group">
-                            <label  for="exampleInputEmail3">First name</label>
-                            <input type="text" class="form-control" id="exampleInputEmail3" placeholder="eg: Raju">
+                            <label  for="firstname">First name</label>
+                            <input type="text" class="form-control" id="firstname" placeholder="eg: Raju">
                         </div>
                        <div class="form-group">
-                            <label  for="exampleInputEmail3">Last name</label>
-                            <input type="text" class="form-control" id="exampleInputEmail3" placeholder="eg: Rastogi">
+                            <label  for="lastname">Last name</label>
+                            <input type="text" class="form-control" id="lastname" placeholder="eg: Rastogi">
                         </div>
                         <div class="form-group">
-                            <label  for="exampleInputPassword3">Roll No</label>
-                            <input type="text" class="form-control" id="exampleInputPassword3" placeholder="eg: 2341">
+                            <label  for="rollno">Roll No</label>
+                            <input type="text" class="form-control" id="rollno" placeholder="eg: 2341">
                         </div>
                         <div class="form-group">
-                            <label for="exampleInputPassword3">Group</label>
-                            <select class="form-control" id="exampleInputPassword3">
+                            <label for="classvalues">Class</label>
+                            <select class="form-control" id="classvalues">
                               <option>9A</option>
                               <option>8B</option>
                               <option>8C</option>
@@ -101,7 +132,7 @@
                             <div class=".col-lg-4">
                                 <!--<button class="btn" id="add_student" style="margin-left: 15%;color: #FFF;background-color: #1A56A0;width: 17%;">Add Student</button>-->
                                 <!-- Button trigger modal -->
-                                <button type="button" class="btn btn-primary btn-md" style="margin-left: 15%; width:17%;" data-toggle="modal" data-target="#myModal">Add Student
+                                <button type="button" id="add_student" class="btn btn-primary btn-md" style="margin-left: 15%; width:17%;">Add Student
                                 </button>
 
 <!-- Modal -->
@@ -113,49 +144,45 @@
         <h4 class="modal-title" id="myModalLabel">Add Student Info</h4>
       </div>
       <div class="modal-body">
-        <form class="form-horizontal">
+        <form class="form-horizontal" id="modal_form" method="post">
+            {% csrf_token %}
+            <div id="abc">
+            {% if errors %}
+                <div id="error_messages"class="alert alert-danger">
+                    {% for error in errors %}
+                        <span>{{error}}</span>
+                    {% endfor %}
+                </div>
+            {% endif %}
+            </div>
             <div class="form-group">
-                <label for="inputEmail3" class="col-sm-2 control-label">First Name</label>
+                <label for="firstnamemodal" class="col-sm-2 control-label">First Name</label>
                 <div class="col-sm-10">
-                    <input type="text" class="form-control" id="inputName" placeholder="eg: Raju">
+                    <input type="text" class="form-control" id="firstnamemodal" name="first_name_modal" placeholder="eg: Raju">
                 </div>
             </div>
             <div class="form-group">
-                <label for="inputEmail3" class="col-sm-2 control-label">Last Name</label>
+                <label for="lastnamemodal" class="col-sm-2 control-label">Last Name</label>
                 <div class="col-sm-10">
-                    <input type="text" class="form-control" id="input_rollno" placeholder="eg: Rastogi">
+                    <input type="text" class="form-control" id="lastnamemodal" name="last_name_modal" placeholder="eg: Rastogi">
                 </div>
             </div>
             <div class="form-group">
-                <label for="inputEmail3" class="col-sm-2 control-label">Roll No</label>
+                <label for="rollnomodal" class="col-sm-2 control-label">Roll No</label>
                 <div class="col-sm-10">
-                    <input type="text" class="form-control" id="inputEmail3" placeholder="eg: 2589">
+                    <input type="text" class="form-control" id="rollnomodal" name="roll_no_modal" placeholder="eg: 2589">
                 </div>
             </div>
             <div class="form-group">
-                <label for="inputPassword3" class="col-sm-2 control-label">Group</label>
+                <label for="classvaluesmodal" class="col-sm-2 control-label">Class</label>
                 <div class="col-sm-10">
-                    <select class="form-control" id="inputPassword3">
-                              <option>9A</option>
-                              <option>8B</option>
-                              <option>8C</option>
-                              <option>2D</option>
-                              <option>3F</option>
+                    <select class="form-control" id="classvaluesmodal" name="class_value_modal">
                             </select>
                 </div>
             </div>
             <div class="form-group">
                 <div class="col-sm-offset-2 col-sm-10">
-                    <div class="checkbox">
-                        <label>
-                            <input type="checkbox"> Remember me
-                        </label>
-                    </div>
-                </div>
-            </div>
-            <div class="form-group">
-                <div class="col-sm-offset-2 col-sm-10">
-                    <button type="submit" class="btn btn-default">Sign in</button>
+                    <button type="submit" class="btn btn-primary">Submit</button>
                 </div>
             </div>
         </form>

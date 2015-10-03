@@ -31,6 +31,41 @@ class StudentView(View):
         # <view logic>
         return render(request, self.template_name, {})
 
+    def post(self, request):
+        import ipdb;ipdb.set_trace()
+        errors=[]
+        message=None
+        post_type='post'
+        organization = request.user.organization
+        if self.args:
+            id=self.args[0]
+            post_type='update'
+        try:
+            first_name = request.POST.get('first_name_modal')
+            last_name = request.POST.get('last_name_modal')
+            roll_no = request.POST.get('roll_no_modal')
+            class_value = request.POST.get('class_value_modal')
+        except Exception, ex:
+            logger.error("Error: %s" %(str(ex)))
+            errors.append("Required parameter was not there")
+            request.POST.post_type = post_type
+            return render(request, self.template_name, {'errors':errors})
+
+        if (first_name or last_name) and roll_no and class_value:
+            try:
+                student = Student.objects.create(first_name=first_name, last_name=last_name, roll_no=roll_no, organization=organization)
+            except Exception, ex:
+                #request.POST.set("post_type", post_type)
+                #request.POST.post_type = post_type
+                logger.error("Error occurred while creating organization doc: %s, first_name: %s, last_name:%s, roll_no: %s, class_value:%s" % (str(ex), first_name, last_name, roll_no,class_value ))
+                errors.append("Error while saving data, please try again")
+            else:
+                message = "Organization has been successfully created"
+        else:
+            errors.append("Required parameter was not there")
+        return render(request, self.template_name, {"errors": errors, "message": message, 'organization':organization})
+
+
 class TeacherView(View):
     template_name='teacher.html'
 
