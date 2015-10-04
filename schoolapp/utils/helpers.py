@@ -141,23 +141,29 @@ def remove_parent_from_student(name, msisdn, organization, token, students=[]):
         logging.error("Error occurred while removing parent, name: %s, msisdn:%s, error:%s" %(name, msisdn, str(ex)))
         raise OperationError("Error occurred while removing parent, name: %s, msisdn:%s" %(name, msisdn))
 
-def update_student(name, roll_no, parents=[]):
+def update_student(student,first_name,last_name,roll_no, group, parents=[]):
     try:
-        student = Student.objects.get(name=name, roll_no=roll_no)
+        add_student_to_group(student,group)
+        remove_student_from_group(student,student.group)
+        student.first_name = first_name
+        student.last_name = last_name
+        student.group = group
+        student.roll_no = roll_no
         for parent in parents:
             if parent not in student.parents:
                 student.parents.append(parent)
         student.save()
+
         return student.id
     except DoesNotExist:
-        raise ValidationError("Student does not exist: name:%s, roll_no:%s" %(name, roll_no))
+        raise ValidationError("Student does not exist: first_name: %s ,last_name:%s, roll_no:%s" %(first_name,last_name, roll_no))
     except Exception, ex:
-        logging.error("Error occurred while updating student, name: %s, roll_no:%s, error:%s" %(name, roll_no, str(ex)))
-        raise OperationError("Error occurred while updating student, name: %s, roll_no:%s" %(name, roll_no))
+        logging.error("Error occurred while updating student, first_name: %s ,last_name: %s, roll_no:%s, error:%s" %(first_name,last_name, roll_no, str(ex)))
+        raise OperationError("Error occurred while updating student, first_name: %s ,last_name: %s, roll_no:%s" %(first_name,last_name, roll_no))
 
-def create_student(name, roll_no, group, parents=[]):
+def create_student(first_name,last_name, roll_no, group,organization, parents=[]):
     try:
-        student = Student.objects.create(name=name, roll_no=roll_no, group=group)
+        student = Student.objects.create(first_name=first_name,last_name=last_name, roll_no=roll_no, group=group,organization=organization)
         for parent in parents:
             if parent not in student.parents:
                 student.parents.append(parent)
@@ -165,10 +171,10 @@ def create_student(name, roll_no, group, parents=[]):
         add_student_to_group(student, group)
         return student.id
     except NotUniqueError:
-        update_student(name, roll_no, parents)
+        update_student(first_name,last_name, roll_no,group, parents)
     except Exception, ex:
-        logging.error("Error occurred while creating student, name: %s, roll_no:%s, error:%s" %(name, roll_no, str(ex)))
-        raise OperationError("Error occurred while creating student, name: %s, roll_no:%s" %(name, roll_no))
+        logging.error("Error occurred while creating student, first_name: %s ,last_name: %s, roll_no:%s, error:%s" %(first_name,last_name, roll_no, str(ex)))
+        raise OperationError("Error occurred while creating student, first_name: %s ,last_name: %s, roll_no:%s" %(first_name,last_name, roll_no))
 
 def add_student_to_group(student, group):
     try:
@@ -180,9 +186,20 @@ def add_student_to_group(student, group):
         logging.error("Error occurred while adding student to group, student: %s, group:%s, error:%s" %(student.id, group.id, str(ex)))
         raise OperationError("Error occurred while adding student to group,student: %s, group:%s" %(student.id, group.id))
 
+def delete_student(student):
+    grp = student.group
+    try:
+        remove_student_from_group(student,grp)
+        student.delete()
+    except Exception, ex:
+        logging.error("Error occurred while deleting student profile: id: %s, %s" % (student.id, str(ex)))
+        raise OperationError("Error occurred while deleting student profile group,student: %s, group:%s" %(student.id, grp.id))
+
+
 def remove_student_from_group(student, group):
     try:
         group.members.remove(student)
+        group.save()
         return True
     except ValueError:
         logging.error("Student is not in the group: student:%s , group:%s" %(student.id, group.id))

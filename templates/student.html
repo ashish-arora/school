@@ -46,7 +46,6 @@
                 $("#lastnamemodal").val($("#" + student_id).find('td').eq(1).html());
                 $("#rollnomodal").val($("#" + student_id).find('td').eq(2).html());
                 var s=$("#" + student_id).find('td').eq(3).attr('id')
-                alert(s)
                 $("#classvaluesmodal").val(s);
                 $("#modal_form").attr('action', '/student/' + student_id + '/');
                 $("#error_messages").val('');
@@ -56,7 +55,7 @@
 
             $(".remove_btn").click(function(){
                 var student_id = $(this).attr("value");
-                console.log("Group id is " + student_id);
+                console.log("Student id is " + student_id);
                 $.post("/api/v1/student/delete/",{"student_id": student_id, "csrfmiddlewaretoken": '{{csrf_token}}'}, function(data, status){
                     alert("Successfully removed the student profile");
                     $('#' + student_id).remove();

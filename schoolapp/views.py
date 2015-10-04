@@ -24,7 +24,7 @@ from rest_framework.views import APIView
 from schoolapp.serializers import GroupSerializer, UserSerializer, OrganizationSerializer, StudentSerializer
 from schoolapp.serializers import AttendanceSerializer, UserLoginSerializer
 from schoolapp.utils.helpers import get_base64_decode, get_base64_encode
-from schoolapp.utils.helpers import create_parent, create_teacher, create_admin, create_student
+from schoolapp.utils.helpers import create_parent, create_teacher, create_admin, create_student,delete_student
 from django.core.cache import cache
 import bson, base64, random, os
 BASE64_URLSAFE="-_"
@@ -650,6 +650,21 @@ class StudentView(APIView):
     #@authenticate_user
     def get(self, request):
         return render_to_response("dashboard/student.html", {}, context_instance=RequestContext(request))
+
+class StudentDeleteView(APIView):
+    def post(self,request):
+        student_id = request.POST.get('student_id')
+        if not student_id:
+            raise ValidationError("Required parameter was not there")
+        try:
+            student = Student.objects.get(id=student_id)
+            delete_student(student)
+        except Exception, ex:
+            logger.error("Error occurred while deleting student profile: id: %s, %s" % (student_id, str(ex)))
+            raise APIException("Error occurred while deleting student profile")
+        else:
+            return JSONResponse({"stat":"ok"})
+
 
 class DashboardBootGridView(APIView):
     #@authenticate_user

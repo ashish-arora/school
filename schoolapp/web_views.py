@@ -19,7 +19,7 @@ from utils import log
 from forms import OrganizationForm
 import json
 from models import TEACHER
-from utils.helpers import get_groups, create_teacher, update_teacher, get_teacher_owner_group,get_students
+from utils.helpers import get_groups, create_teacher, update_teacher, get_teacher_owner_group,get_students,create_student,update_student
 
 logger = log.Logger.get_logger(__file__)
 
@@ -39,7 +39,6 @@ class StudentView(View):
         post_type='post'
         grp = None
         organization = request.user.organization
-        import ipdb; ipdb.set_trace()
         if self.args:
             id=self.args[0]
             post_type='update'
@@ -65,16 +64,12 @@ class StudentView(View):
                     errors.append("Error occurred while updating record, Please try again")
                     request.POST.post_type = post_type
                 else:
-                    student.first_name = first_name
-                    student.last_name = last_name
-                    student.roll_no = roll_no
-                    student.group = grp
-                    student.save()
+                    update_student(student,first_name=first_name,last_name=last_name,roll_no=roll_no,group=grp)
                     message = "Student information has been successfully updated"
             else:
                 try:
                     org = organization[0]
-                    student = Student.objects.create(first_name=first_name, last_name=last_name, roll_no=roll_no, group=grp, organization=org)
+                    create_student(first_name=first_name, last_name=last_name, roll_no=roll_no, group=grp, organization=org)
                 except Exception, ex:
                     #request.POST.set("post_type", post_type)
                     #request.POST.post_type = post_type
@@ -88,29 +83,6 @@ class StudentView(View):
         groups = get_groups(request.user, organization)
         students = get_students(organization)
         return render(request, self.template_name, {"errors": errors, "message": message, 'organization':organization,'groups':groups,"students":students})
-
-class StudentDeleteView(View):
-    template_name = 'group.html'
-
-    def post(self, request):
-        errors=[]
-        message=None
-        import ipdb; ipdb.set_trace()
-        organization = request.user.organization
-        try:
-            if self.args:
-                id=self.args[0]
-                student = Student.objects.get(id=id)
-                student.delete()
-                message = "Student profile has been successfully deleted"
-            else:
-                errors.append("Please specify student id")
-        except Exception, ex:
-            logger.error("Error occurred while student record deletion: %s" % id)
-            errors.append("Error occurred while student record deletion")
-        groups = get_groups(request.user, organization)
-        students = get_students(organization)
-        return render(request, self.template_name, {"groups": groups, "errors": errors, "message": message,'organization':organization,"students":students})
 
 class GroupDeleteView(View):
     template_name = 'group.html'
@@ -317,7 +289,6 @@ class TeacherView(View):
         if id:
             # to handle update request
             try:
-                import ipdb;ipdb.set_trace()
                 teacher = CustomUser.objects.get(id=id)
                 update_teacher(teacher, name, msisdn, organization, type=TEACHER, groups=groups, email=email, password=password)
             except Exception, ex:
