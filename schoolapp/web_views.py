@@ -89,6 +89,29 @@ class StudentView(View):
         students = get_students(organization)
         return render(request, self.template_name, {"errors": errors, "message": message, 'organization':organization,'groups':groups,"students":students})
 
+class StudentDeleteView(View):
+    template_name = 'group.html'
+
+    def post(self, request):
+        errors=[]
+        message=None
+        import ipdb; ipdb.set_trace()
+        organization = request.user.organization
+        try:
+            if self.args:
+                id=self.args[0]
+                student = Student.objects.get(id=id)
+                student.delete()
+                message = "Student profile has been successfully deleted"
+            else:
+                errors.append("Please specify student id")
+        except Exception, ex:
+            logger.error("Error occurred while student record deletion: %s" % id)
+            errors.append("Error occurred while student record deletion")
+        groups = get_groups(request.user, organization)
+        students = get_students(organization)
+        return render(request, self.template_name, {"groups": groups, "errors": errors, "message": message,'organization':organization,"students":students})
+
 class GroupDeleteView(View):
     template_name = 'group.html'
 
@@ -294,6 +317,7 @@ class TeacherView(View):
         if id:
             # to handle update request
             try:
+                import ipdb;ipdb.set_trace()
                 teacher = CustomUser.objects.get(id=id)
                 update_teacher(teacher, name, msisdn, organization, type=TEACHER, groups=groups, email=email, password=password)
             except Exception, ex:

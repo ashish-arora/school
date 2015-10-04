@@ -52,6 +52,19 @@
                 $("#error_messages").val('');
                 $("#myModalLabel").text("Edit Student");
                 $('#myModal').modal('show');
+            });
+
+            $(".remove_btn").click(function(){
+                var student_id = $(this).attr("value");
+                console.log("Group id is " + student_id);
+                $.post("/api/v1/student/delete/",{"student_id": student_id, "csrfmiddlewaretoken": '{{csrf_token}}'}, function(data, status){
+                    alert("Successfully removed the student profile");
+                    $('#' + student_id).remove();
+                })
+
+                .fail(function(){
+                   alert("Error occurred while deleting group");
+                });
 
             });
 

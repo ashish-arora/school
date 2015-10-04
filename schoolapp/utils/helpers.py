@@ -65,6 +65,7 @@ def create_teacher(name, msisdn, organization, token, username, groups=[], email
 
 def update_teacher(teacher, name, msisdn, organization, token, type=TEACHER, groups=[], email='', password=''):
     try:
+        import ipdb;ipdb.set_trace()
         #user = CustomUser.objects.get(msisdn=msisdn, type=type)
         #user.groups = list(set(user.groups.append(groups)))
         if organization:
