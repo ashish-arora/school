@@ -77,25 +77,25 @@ def update_teacher(teacher, name, msisdn, organization, token, type=TEACHER, gro
         if email:
             teacher.email = email
         if password:
-            teacher.password = password
+            teacher.set_password(password)
         if msisdn:
             teacher.msisdn = msisdn
         teacher.save()
         for group in groups:
             if teacher not in group.owner:
                 group.owner.append(teacher)
-        group.save()
+                group.save()
         return teacher
     except Exception, ex:
         logging.error("Error occurred while updating teacher, name: %s, msisdn:%s, error:%s" %(name, msisdn, str(ex)))
         raise OperationError("Error occurred while updating teacher, name: %s, msisdn:%s" %(name, msisdn))
 
-def create_parent(name, msisdn, organization, token, students=[]):
+def create_parent(name, msisdn, organization, token, username, students=[], email='', password=''):
     try:
-       user = User.objects.create(name=name, msisdn=msisdn, type=PARENT, organization=organization, token=token)
+       parent = CustomUser.objects.create(first_name=name, last_name=name, msisdn=msisdn, type=PARENT, organization=[organization], token=token, username=username)
        if students:
-           add_parent_to_student(user, students)
-       return user.id
+           add_parent_to_student(parent, students)
+       return parent.id
     except Exception, ex:
         logging.error("Error occurred while creating parent, name: %s, msisdn:%s, error:%s" %(name, msisdn, str(ex)))
         raise OperationError("Error occurred while creating parent, name: %s, msisdn:%s" %(name, msisdn))
@@ -111,18 +111,26 @@ def add_parent_to_student(parent, students=[]):
         logging.error("Error occurred while adding parent in student table, parent: %s, students:%s, error:%s" %(parent.id, json.dumps(students), str(ex)))
         raise OperationError("Error occurred while adding parent in student table, parent: %s, students:%s" %(parent.id, json.dumps(students)))
 
-def update_parent(name, msisdn, organization, token, students=[]):
+def update_parent(parent, name, msisdn, organization, token, type=PARENT, students=[], email='', password=''):
     try:
-        user = User.objects.get(msisdn=msisdn, type=type)
-        #user.groups = list(set(user.groups.append(groups)))
-        user.organization=organization
-        user.token = token
-        user.save()
+        if organization:
+            parent.organization=organization
+        if token:
+            parent.token = token
+        if name:
+            parent.name = name
+        if email:
+            parent.email = email
+        if password:
+            parent.set_password(password)
+        if msisdn:
+            parent.msisdn = msisdn
+        parent.save()
         for student in students:
-            if user not in student.parents:
-                student.parents.append(user)
+            if parent not in student.parents:
+                student.parents.append(parent)
                 student.save()
-        return user
+        return parent
     except Exception, ex:
         logging.error("Error occurred while updating parent, name: %s, msisdn:%s, error:%s" %(name, msisdn, str(ex)))
         raise OperationError("Error occurred while updating parent, name: %s, msisdn:%s" %(name, msisdn))

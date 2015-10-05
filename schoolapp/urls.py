@@ -60,9 +60,10 @@ urlpatterns = patterns('',
     url(r'^manageuser/teacher/(.*)/', login_required(web_views.TeacherView.as_view(), login_url='/login/')),
     url(r'^manageuser/teacher', login_required(web_views.TeacherView.as_view(), login_url='/login/')),
     url(r'^manageuser/teacher/delete/(.*)/', login_required(web_views.TeacherDeleteView.as_view(), login_url='/login/')),
-    url(r'^manageuser/parents/(.*)/', login_required(web_views.ParentsView.as_view(), login_url='/login/')),
-    url(r'^manageuser/parents', login_required(web_views.ParentsView.as_view(), login_url='/login/')),
-    url(r'^manageuser/parents/delete/(.*)/', login_required(web_views.ParentsDeleteView.as_view(), login_url='/login/')),
+    url(r'^manageuser/parent/(.*)/', login_required(web_views.ParentsView.as_view(), login_url='/login/')),
+    url(r'^manageuser/parent', login_required(web_views.ParentsView.as_view(), login_url='/login/')),
+    url(r'^manageuser/parent/delete/(.*)/', login_required(web_views.ParentsDeleteView.as_view(), login_url='/login/')),
+    url(r'^attendance/', login_required(web_views.AttendanceView.as_view(), login_url='/login/')),
 
     url(r'^dashboard/', login_required(views.DashboardView.as_view(), login_url='/login/')),
 
