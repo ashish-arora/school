@@ -28,7 +28,7 @@ class UserLoginSerializer(DocumentSerializer):
 
     class Meta:
         model=CustomUser
-        fields = ('msisdn', 'token', 'devices')
+        fields = ('msisdn', 'token','devices')
 
 class AttendanceSerializer(DocumentSerializer):
 

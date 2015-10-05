@@ -160,14 +160,18 @@ class AccountLogin(APIView):
 
 
     def show_groups(self, user):
-        #preparing data {'class1':[{'name1':'roll1'}, {'name2':'roll2'}], 'class2':[{'name1':'roll1'},..],..}
-        group_ids = []
-        result_dict = {}
         groups = Group.objects.filter(owner=user)
+        group_list=[]
         for group in groups:
-            result_dict[group.name]={}
+            group_dict={'class_id':str(group.id),'class_name':group.name}
+            members=[]
             for student in group.members:
-                result_dict[group.name].update({student.name : student.roll_no})
+                student_dict={"student_id":str(student.id), "first_name":student.first_name, "last_name":student.last_name,"roll_no":student.roll_no}
+                members.append(student_dict)
+            group_dict.update({"members":members})
+            group_list.append(group_dict)
+
+        result_dict={"class":group_list}
         return result_dict
 
     def show_teachers(self, user):
@@ -190,6 +194,8 @@ class AccountLogin(APIView):
                 type: string
             msisdn:
                 required: true
+                type: string
+            devices:
                 type: string
 
         serializer: UserLoginSerializer
@@ -295,7 +301,39 @@ class AccountPinValidation(APIView):
         QueueRequests.enqueue(SMS_QUEUE, {'msisdn': msisdn, 'message': PIN_MSG})
         return JSONResponse({"stat": "ok"})
 
+
+
     def post(self,request):
+        """
+        Pin validation and Login
+
+        ---
+        # YAML (must be separated by `---`)
+
+        type:
+            msisdn:
+                required: true
+                type: string
+            pin:
+                required: true
+                type: string
+            devices:
+                required: true
+                type: string
+
+        serializer: UserLoginSerializer
+        omit_serializer: true
+
+        parameters_strategy: merge
+        omit_parameters:
+            - path
+
+        responseMessages:
+            - code: 200
+              message: Successfully Logged in
+            - code: 400
+              message: Bad Request
+        """
         try:
             msisdn = request.data.get('msisdn')
             pincode = int(request.data.get('pin'))
@@ -304,7 +342,7 @@ class AccountPinValidation(APIView):
             raise ValidationError("Parameters are not in correct format: %s" % str(ex))
         key = "pincodes-"+str(msisdn)
         cache_pin = int(cache.get(key))
-        cache.delete(key)
+        #cache.delete(key)   INFO: Not deleting pin as of now. Let it expire on its own
         if cache_pin == pincode or pincode == 4141:
             user = None
             try:
