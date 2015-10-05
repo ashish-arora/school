@@ -10,7 +10,7 @@ from utils import log
 from mongoengine.errors import NotUniqueError
 from mongoengine.errors import DoesNotExist
 import base64, os
-from models import Organization, Group, Student
+from models import Organization, Group, Student,CustomUser
 # Create your views here.
 from models import VALID_TYPES, VALID_COUNTRY, VALID_ATTENDANCE_TYPES
 from models import ADMIN, TEACHER, STUDENT, PARENT
