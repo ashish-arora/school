@@ -665,6 +665,12 @@ class StudentDeleteView(APIView):
         else:
             return JSONResponse({"stat":"ok"})
 
+class PingWebHandler(APIView):
+    def get(self,request):
+        return JSONResponse({'stat':'pong'})
+
+    def post(self,request):
+        return JSONResponse({'stat':'pong'})
 
 class DashboardBootGridView(APIView):
     #@authenticate_user
