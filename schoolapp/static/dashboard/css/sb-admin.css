@@ -8,7 +8,7 @@
 
 body {
     margin-top: 100px;
-    background-color: #222;
+    background-color: #e9eaed;
 }
 
 @media(min-width:768px) {
@@ -225,3 +225,11 @@ ul.alert-dropdown {
 .panel-yellow > a:hover {
     color: #df8a13;
 }
+
+.add-bg-color{
+    background-color:#286090;
+    }
+
+.white-heading{
+    color:#FFF;
+    }

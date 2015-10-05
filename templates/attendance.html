@@ -1,0 +1,265 @@
+{% extends "base.html" %}
+
+{% block css%}
+{% endblock css%}
+
+{% block javascript%}
+    <script>
+        $(window).load(function(){
+            {% if request.POST %}
+                console.log("inside post");
+                $("#inputname").val('{{request.POST.name}}');
+                $("#inputcity").val('{{request.POST.city}}');
+                $("#inputaddress").val('{{request.POST.address}}');
+                $("#inputstate").val('{{request.POST.state}}');
+                $("#inputcountry").val('{{request.POST.country}}');
+                {% if request.POST.post_type == "post" %}
+                    $("#modal_form").attr('action', '/organization/');
+                {% else %}
+                    $("#modal_form").attr('action', '/organization/' + '{{organization.id}}' + '/');
+                {% endif %}
+            {% endif %}
+
+            {% if errors %}
+                $('#myModal').modal('show');
+            {% endif %}
+
+            $(".edit_btn").click(function() {
+                var organization_id = $(this).attr("value");
+                console.log("Organization id is " + organization_id);
+                $("#inputname").val($("#" + organization_id).find('td').eq(0).html());
+                $("#inputcity").val($("#" + organization_id).find('td').eq(1).html());
+                $("#inputstate").val($("#" + organization_id).find('td').eq(2).html());
+                $("#inputcountry").val($("#" + organization_id).find('td').eq(3).html());
+                $("#inputaddress").val($("#" + organization_id).find('td').eq(4).html());
+                $("#modal_form").attr('action', '/organization/' + organization_id + '/');
+                $("#error_messages").val('');
+                $("#myModalLabel").text("Edit Organization");
+                $('#myModal').modal('show');
+            });
+
+            $(".remove_btn").click(function(){
+                var organization_id = $(this).attr("value");
+                console.log("Organization id is " + organization_id);
+                $.post("/api/v1/organization/delete/",{"organization_id": organization_id, "csrfmiddlewaretoken": '{{csrf_token}}'}, function(data, status){
+                    alert("Successfully removed the organization");
+                    $('#' + organization_id).remove();
+                })
+
+                .fail(function(){
+                   alert("Error occurred while deleting organization");
+                });
+
+            });
+
+            $("#add_organization").click(function(){
+                $("#modal_form").attr('action', '/organization/');
+                $("#inputname").val('');
+                $("#inputcity").val('');
+                $("#inputstate").val('');
+                $("#inputcountry").val('');
+                $("#inputaddress").val('');
+                $("#abc").html('');
+                $("#myModalLabel").text("Add Organization");
+                $('#myModal').modal('show');
+            });
+
+            $('#datetimepicker1').datepicker();
+        });
+    </script>
+
+{% endblock javascript%}
+
+{% block content %}
+ <div id="page-wrapper">
+
+            <div class="container-fluid">
+
+                <!-- Page Heading -->
+                <div class="row">
+                    <div class="col-lg-12">
+                        <h1 class="page-header">
+                            Attendance Info
+                            <small>Subheading</small>
+                        </h1>
+                        <ol class="breadcrumb">
+                            <li>
+                                <i class="fa fa-dashboard"></i>  <a href="index.html">Dashboard</a>
+                            </li>
+                            <li class="active">
+                                <i class="fa fa-file"></i> Attendance
+                            </li>
+                        </ol>
+                    </div>
+                </div>
+                {% if message %}
+                    <div class="alert alert-success">
+                     {{message}}
+                    </div>
+                {% endif %}
+                <div class="row">
+                            <div class="col-lg-8">
+                                <ul class="nav nav-tabs">
+                                    <li role="presentation" class="active"><a href="#">Take Attendance</a></li>
+                                    <li role="presentation"><a href="#">Show Attendance</a></li>
+                                    <li role="presentation"><a href="#">log</a></li>
+                                    <li role="presentation"><a href="#">Search</a></li>
+                                </ul>
+                            </div>
+                            <div class=".col-lg-4">
+                                <!--<button class="btn" id="add_Organization" style="margin-left: 15%;color: #FFF;background-color: #1A56A0;width: 17%;">Add Organization</button>-->
+                                <!-- Button trigger modal -->
+                                <!--<button type="button" id="add_organization" class="btn btn-primary btn-md" style="margin-left: 15%; width:17%;" data-toggle="modal" data-target="#myModal">Add Organization
+                                </button>-->
+                                <!--<button type="button" id="add_organization" class="btn btn-primary btn-md" style="margin-left: 15%; width:17%;">Add Organization
+                                </button>-->
+
+<!-- Modal -->
+<div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title" id="myModalLabel">Add Organization Info</h4>
+      </div>
+      <div class="modal-body">
+        <form class="form-horizontal" id="modal_form" method="post">
+            {% csrf_token %}
+            <div id="abc">
+            {% if errors %}
+                <div id="error_messages"class="alert alert-danger">
+                    {% for error in errors %}
+                        <span>{{error}}</span>
+                    {% endfor %}
+                </div>
+            {% endif %}
+            </div>
+            <div class="form-group">
+                <label for="inputname" class="col-sm-2 control-label">Name</label>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" name="name" id="inputname" placeholder="Name">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="inputcity" class="col-sm-2 control-label">City</label>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" id="inputcity" name="city" placeholder="City">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="inputstate" class="col-sm-2 control-label">State</label>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" id="inputstate" name="state" placeholder="State">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="inputaddress" class="col-sm-2 control-label">Address</label>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" name="address" id="inputaddress" placeholder="Address">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="inputcountry" class="col-sm-2 control-label">Country</label>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" name="country" id="inputcountry" placeholder="Country">
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-offset-2 col-sm-10">
+                    <div class="checkbox">
+                        <label>
+                            <input type="checkbox"> Remember me
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-offset-2 col-sm-10">
+                    <button type="submit" class="btn btn-primary">Submit</button>
+                </div>
+            </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary">Save changes</button>
+      </div>
+    </div>
+  </div>
+</div><!-- Modal -->
+
+
+
+                            </div>
+                        </div>
+                        <div class="row">
+                            <form role="form" style="margin-left:10%; margin-right:10%;">
+
+                                <div class="form-group">
+                                    <label for="inputclass" class="control-label">Select Class:</label>
+                                    <div class="col-sm-3">
+                                        <select class="form-control" name="group_id" id="inputgroup">
+                                            {% for group in groups %}
+                                                <option value="{{group.id}}">{{group.name}}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="inputdata" class="control-label" style="width:10%;">Select Date:</label>
+                                    <div class="input-group date col-sm-2" id='datetimepicker1'>
+                                        <input type='text' class="form-control" />
+                                        <span class="input-group-addon">
+                                            <span class="glyphicon glyphicon-calendar"></span>
+                                        </span>
+                                    </div>
+                                </div>
+
+                            </form>
+                        </div>
+                        <div class="row">
+                        <div class="table-responsive col">
+                            <table class="table table-bordered table-hover table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>City</th>
+                                        <th>State</th>
+                                        <th>Country</th>
+                                        <th>Address</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+
+                                    {% for organization in organizations %}
+                                        <tr id='{{organization.id}}'>
+                                        <td>{{organization.name}}</td>
+                                        <td>{{organization.city}}</td>
+                                        <td>{{organization.state}}</td>
+                                        <td>{{organization.country}}</td>
+                                        <td>{{organization.address}}</td>
+                                            <td><button type="button" style="width:45%;" id="edit_btn" value='{{organization.id}}' class="btn btn-success edit_btn">Edit</button>
+                                            <button type="button" style="width:45%;"  id="remove_btn" value='{{organization.id}}' class="btn btn-info remove_btn">Remove</button></td>
+                                        </tr>
+                                    {% endfor %}
+
+                                </tbody>
+                            </table>
+                        </div>
+                        </div>
+                   </div>
+                </div>
+                <!-- /.row -->
+
+            </div>
+            <!-- /.container-fluid -->
+
+        </div>
+        <!-- /#page-wrapper -->
+
+    </div>
+    <!-- /#wrapper -->
+
+{% endblock content %}
