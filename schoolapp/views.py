@@ -1,5 +1,4 @@
 from django.shortcuts import render
-from .models import User
 from rest_framework import status
 from rest_framework.exceptions import ValidationError, AuthenticationFailed, ParseError
 from rest_framework.exceptions import APIException
@@ -225,7 +224,7 @@ class AccountLogin(APIView):
             except Exception, ex:
                 raise ParseError("Invalid json data: %s" % devices)
         try:
-            user = User.objects.get(msisdn=msisdn, token=token)
+            user = CustomUser.objects.get(msisdn=msisdn, token=token)
         except Exception, ex:
             raise AuthenticationFailed("Invalid credentials,msisdn:%s, token:%s, type:%s" %(msisdn, token))
 
@@ -410,7 +409,7 @@ class Attendance(APIView):
             if is_present not in VALID_ATTENDANCE_TYPES:
                 raise ValidationError("Invalid attendance type : %s " %(attendance_data))
             try:
-                student = User.objects.get(id=student_id)
+                student = CustomUser.objects.get(id=student_id)
             except DoesNotExist, ex:
                 raise DoesNotExist("Student id does not exist: %s" % student_id)
 
