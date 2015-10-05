@@ -9,10 +9,9 @@ from django.http import HttpResponseRedirect
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import login, logout
 from mongoengine.django.auth import User
-from schoolapp.models import CustomUser
 from mongoengine.django.mongo_auth import models
 from mongoengine.queryset import DoesNotExist
-from schoolapp.models import Organization, Student, Group
+from schoolapp.models import Organization, Student, Group, CustomUser
 import bson, base64, random, os
 BASE64_URLSAFE="-_"
 from utils import log

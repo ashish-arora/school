@@ -10,7 +10,7 @@ from utils import log
 from mongoengine.errors import NotUniqueError
 from mongoengine.errors import DoesNotExist
 import base64, os
-from models import User, Organization, Group, Student
+from models import Organization, Group, Student
 # Create your views here.
 from models import VALID_TYPES, VALID_COUNTRY, VALID_ATTENDANCE_TYPES
 from models import ADMIN, TEACHER, STUDENT, PARENT
@@ -290,7 +290,7 @@ class AccountPinValidation(APIView):
             raise ValidationError("Msisdn is not provided")
         user = None
         try:
-            user = User.objects.get(msisdn=msisdn)
+            user = CustomUser.objects.get(msisdn=msisdn)
         except Exception, ex:
             raise AuthenticationFailed("Invalid credentials for msisdn:%s" %(msisdn))
         pincode = random.randint(1000,9999)
@@ -346,7 +346,7 @@ class AccountPinValidation(APIView):
         if cache_pin == pincode or pincode == 4141:
             user = None
             try:
-                user = User.objects.get(msisdn=msisdn)
+                user = CustomUser.objects.get(msisdn=msisdn)
             except Exception, ex:
                 raise AuthenticationFailed("Invalid credentials for msisdn:%s" %(msisdn))
             token = base64.urlsafe_b64encode(os.urandom(8))
@@ -601,8 +601,8 @@ class OrganizationView(APIView):
         try:
             organizations = Organization.objects.all()
         except Exception, ex:
-            logger.error("Error occurred while creating organization doc: %s, name: %s, country:%s, city: %s, state:%s, address:%s " % (str(ex), name, country, city, state, address))
-            raise APIException("Error while saving data")
+            logger.error("Error occurred while fetching all organization ")
+            raise APIException("Error occurred while fetching all organization")
         else:
             serializer = OrganizationSerializer(organizations, many=True)
             return JSONResponse(serializer.data, status=200)
