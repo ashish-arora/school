@@ -24,7 +24,15 @@
                 $('#myModal').modal('show');
             {% endif %}
 
+
+            function set_selected_group_option(list_data){
+                for (i = 0; i < list_data.length; i++) {
+                     $('#inputgroup option[value=' + list_data[i] + ']').attr('selected', true);
+                };
+            }
+
             $(".edit_btn").click(function() {
+                $("#abc").html('');
                 var teacher_id = $(this).attr("value");
                 console.log("teacher id is " + teacher_id);
                 $("#inputname").val($("#" + teacher_id).find('td').eq(0).html());
@@ -32,6 +40,10 @@
                 $("#inputemail").val($("#" + teacher_id).find('td').eq(2).html());
                 $("#inputusername").val($("#" + teacher_id).find('td').eq(5).html());
                 $("#modal_form").attr('action', '/manageuser/teacher/' + teacher_id + '/');
+                $("option:selected").removeAttr("selected");
+                $('select').val('');
+                set_selected_group_option(teacher_groups_map[teacher_id]);
+                $("#inputorganization").val(teacher_organization_map[teacher_id]);
                 $("#error_messages").val('');
                 $("#myModalLabel").text("Edit Teacher");
                 $('#myModal').modal('show');
@@ -40,9 +52,9 @@
             $(".remove_btn").click(function(){
                 var teacher_id = $(this).attr("value");
                 console.log("teacher id is " + teacher_id);
-                $.post("/api/v1/teacher/delete/",{"teacher_id": teacher_id, "csrfmiddlewaretoken": '{{csrf_token}}'}, function(data, status){
+                $.post("/manageuser/teacher/delete/",{"teacher_id": teacher_id, "csrfmiddlewaretoken": '{{csrf_token}}'}, function(data, status){
                     alert("Successfully removed the teacher");
-                    $('#' + teacher_id).remove();
+                    //$('#' + teacher_id).remove();
                 })
 
                 .fail(function(){
@@ -58,6 +70,8 @@
                 $("#inputmsisdn").val('');
                 $("#inputusername").val('');
                 $("#inputpassword").val('');
+                $("option:selected").removeAttr("selected");
+                $('select').val('');
                 $("#abc").html('');
                 $("#myModalLabel").text("Add Teacher");
                 $('#myModal').modal('show');
@@ -99,8 +113,13 @@
 
             var organization_data = {};
             var group_data = {};
+            var teacher_groups_map={};
+            var teacher_organization_map={};
             {% for teacher, groups in teachers %}
+                teacher_groups_map['{{teacher.id}}']=[];
+                teacher_organization_map['{{teacher.id}}']=[];
                 {% for organization in teacher.organization %}
+                    teacher_organization_map['{{teacher.id}}'].push('{{organization.id}}');
                     organization_data['{{organization.id}}'] = {};
                     organization_data['{{organization.id}}']['name'] = '{{organization.name}}';
                     organization_data['{{organization.id}}']['state'] = '{{organization.state}}';
@@ -109,13 +128,14 @@
                     organization_data['{{organization.id}}']['city'] = '{{organization.city}}';
                 {% endfor %}
                 {% for group in groups %}
+                    teacher_groups_map['{{teacher.id}}'].push('{{group.id}}');
                     group_data['{{group.id}}'] = {};
                     group_data['{{group.id}}']['name'] = '{{group.name}}';
                     group_data['{{group.id}}']['organization'] = '{{group.organization.name}}';
                     group_data['{{group.id}}']['members']=[];
                     group_data['{{group.id}}']['owners']=[];
                     {% for member in group.members %}
-                        group_data['{{group.id}}']['members'].push('{{member.name}}');
+                        group_data['{{group.id}}']['members'].push('{{member.first_name}}');
                     {% endfor %}
                     {% for owner in group.owner %}
                         group_data['{{group.id}}']['owners'].push('{{owner.first_name}}');
@@ -176,9 +196,9 @@
 <div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
   <div class="modal-dialog" role="document">
     <div class="modal-content">
-      <div class="modal-header">
+      <div class="modal-header add-bg-color">
         <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-        <h4 class="modal-title" id="myModalLabel">Add Teacher Info</h4>
+        <h4 class="modal-title white-heading" id="myModalLabel">Add Teacher Info</h4>
       </div>
       <div class="modal-body">
         <form class="form-horizontal" id="modal_form" method="post">
@@ -406,7 +426,8 @@
                                         </td>
                                         <td>{{teacher.username}}</td>
                                             <td><button type="button" style="width:45%;" id="edit_btn" value='{{teacher.id}}' class="btn btn-success edit_btn">Edit</button>
-                                            <button type="button" style="width:45%;" id="remove_btn" value='{{teacher.id}}' class="btn btn-danger remove_btn">Remove</button></td>
+                                            <!--<button type="button" style="width:45%;" id="remove_btn" value='{{teacher.id}}' class="btn btn-danger remove_btn">Remove</button>-->
+                                            <a class="btn btn-danger" href="/manageuser/teacher/delete/{{teacher.id}}/">Remove</a></td>
                                         </tr>
                                     {% endfor %}
 

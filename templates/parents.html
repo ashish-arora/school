@@ -24,6 +24,12 @@
                 $('#myModal').modal('show');
             {% endif %}
 
+            function set_selected_group_option(list_data){
+                for (i = 0; i < list_data.length; i++) {
+                     $('#inputstudent option[value=' + list_data[i] + ']').attr('selected', true);
+                };
+            }
+
             $(".edit_btn").click(function() {
                 var parent_id = $(this).attr("value");
                 console.log("parent id is " + parent_id);
@@ -32,6 +38,10 @@
                 $("#inputemail").val($("#" + parent_id).find('td').eq(2).html());
                 $("#inputusername").val($("#" + parent_id).find('td').eq(5).html());
                 $("#modal_form").attr('action', '/manageuser/parent/' + parent_id + '/');
+                $("option:selected").removeAttr("selected");
+                $('select').val('');
+                set_selected_group_option(parent_students_map[parent_id]);
+                $("#inputorganization").val(parent_organization_map[parent_id]);
                 $("#error_messages").val('');
                 $("#myModalLabel").text("Edit Parent");
                 $('#myModal').modal('show');
@@ -58,6 +68,8 @@
                 $("#inputmsisdn").val('');
                 $("#inputusername").val('');
                 $("#inputpassword").val('');
+                $("option:selected").removeAttr("selected");
+                $('select').val('');
                 $("#abc").html('');
                 $("#myModalLabel").text("Add Parent");
                 $('#myModal').modal('show');
@@ -99,8 +111,13 @@
 
             var organization_data = {};
             var student_data = {};
+            var parent_students_map={};
+            var parent_organization_map={};
             {% for parent, students in parents %}
+                parent_organization_map['{{parent.id}}']=[];
+                parent_students_map['{{parent.id}}']=[];
                 {% for organization in parent.organization %}
+                    parent_organization_map['{{parent.id}}'].push('{{organization.id}}');
                     organization_data['{{organization.id}}'] = {};
                     organization_data['{{organization.id}}']['name'] = '{{organization.name}}';
                     organization_data['{{organization.id}}']['state'] = '{{organization.state}}';
@@ -109,6 +126,7 @@
                     organization_data['{{organization.id}}']['city'] = '{{organization.city}}';
                 {% endfor %}
                 {% for student in students %}
+                    parent_students_map['{{parent.id}}'].push('{{student.id}}');
                     student_data['{{student.id}}'] = {};
                     student_data['{{student.id}}']['name'] = '{{student.first_name}}';
                     student_data['{{student.id}}']['group'] = '{{student.group.name}}';
@@ -404,7 +422,8 @@
                                         </td>
                                         <td>{{parent.username}}</td>
                                             <td><button type="button" style="width:45%;" id="edit_btn" value='{{parent.id}}' class="btn btn-success edit_btn">Edit</button>
-                                            <button type="button" style="width:45%;" id="remove_btn" value='{{parent.id}}' class="btn btn-danger remove_btn">Remove</button></td>
+                                            <!--<button type="button" style="width:45%;" id="remove_btn" value='{{parent.id}}' class="btn btn-danger remove_btn">Remove</button></td>-->
+                                            <a class="btn btn-danger" href="/manageuser/parent/delete/{{parent.id}}/">Remove</a></td>
                                         </tr>
                                     {% endfor %}
 

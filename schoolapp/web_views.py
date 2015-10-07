@@ -1,7 +1,7 @@
 __author__ = 'ashish'
 from django.views.generic import View
 from django.http import HttpResponse
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 #from schoolapp.models import User
 from django.contrib.auth import REDIRECT_FIELD_NAME, login as auth_login
@@ -20,7 +20,8 @@ from forms import OrganizationForm
 import json
 from models import TEACHER, PARENT
 from utils.helpers import get_groups, create_teacher, update_teacher, get_teacher_owner_group,\
-    get_students, create_student, update_student, create_parent, update_parent
+    get_students, create_student, update_student, create_parent, update_parent, get_group_list, get_teacher_view_data, \
+    delete_teacher, get_parent_view_data, delete_parent
 
 
 logger = log.Logger.get_logger(__file__)
@@ -92,19 +93,18 @@ class GroupDeleteView(View):
     def post(self, request):
         errors=[]
         message=None
-        try:
-            if self.args:
-                id=self.args[0]
-                group = Group.objects.get(id=id)
+        group_id = request.POST.get('group_id')
+        if group_id:
+            try:
+                group = Group.objects.get(id=group_id)
                 group.delete()
                 message = "Group has been successfully deleted"
-            else:
-                errors.append("Please specify group id")
-        except Exception, ex:
-            logger.error("Error occurred while group deletion: %s" % id)
-            errors.append("Error occurred while group deletion")
-        groups = Group.objects.filter(owner=request.user)
-        return render(request, self.template_name, {"groups": groups, "errors": errors, "message": message})
+            except Exception, ex:
+                logger.error("Error occurred while group deletion: %s" % id)
+                errors.append("Error occurred while group deletion")
+        data = get_group_list(request.user)
+        data.update({"errors": errors, "message": message})
+        return render(request, self.template_name, data)
 
 class GroupView(View):
     template_name='group.html'
@@ -121,14 +121,16 @@ class GroupView(View):
         errors=[]
         message=None
         post_type='post'
+        members=[]
+        owners=[]
         if self.args:
             id=self.args[0]
             post_type='update'
         try:
             name = request.POST.get('name')
             organization_id = request.POST.get('organization_id')
-            members = request.POST.get('members')
-            owner = request.POST.get('owner')
+            member_ids = request.POST.getlist('member_id[]')
+            owner_ids = request.POST.getlist('owner_id[]')
         except Exception, ex:
             logger.error("Error: %s" %(str(ex)))
             errors.append("Required parameter was not there")
@@ -138,28 +140,10 @@ class GroupView(View):
             errors.append("Required parameter was not there")
             request.POST.post_type = post_type
             return render(request, self.template_name, {'errors':errors})
-        if members:
-            try:
-                members = json.loads(members)
-            except Exception, ex:
-                errors.append("Members are not in correct format")
-                return render(request, self.template_name, {"errors": errors, "message": message})
-            else:
-                if not isinstance(members, list):
-                    errors.append("Members are not in correct format")
-                    return render(request, self.template_name, {"errors": errors, "message": message})
-                members = Student.objects.filter(id__in=members)
-        if owner:
-            try:
-                owner = json.loads(owner)
-            except Exception, ex:
-                errors.append("Owner is not in correct format")
-                return render(request, self.template_name, {"errors": errors, "message": message})
-            else:
-                if not isinstance(owner, list):
-                    errors.append("Owner are not in correct format")
-                    return render(request, self.template_name, {"errors": errors, "message": message})
-                owner = User.objects.filter(id__in=owner)
+        if member_ids:
+            members = Student.objects.filter(id__in=member_ids)
+        if owner_ids:
+            owners = User.objects.filter(id__in=owner_ids)
         try:
             organization = Organization.objects.get(id=organization_id)
         except Exception, ex:
@@ -172,6 +156,8 @@ class GroupView(View):
                 group = Group.objects.get(id=id)
 
             except Exception, ex:
+                group=None
+                groups=[]
                 logger.error("Group does not exist :%s" % id)
                 errors.append("Error occurred while updating record, Please try again")
             else:
@@ -179,70 +165,50 @@ class GroupView(View):
                 group.organization = organization
                 if members:
                     group.members=members
-                if owner:
-                    group.owner = owner
+                if owners:
+                    group.owner = owners
                 group.save()
                 message = "Group has been successfully updated"
-                groups = get_groups(request.user, [organization])
-            return render(request, self.template_name, {"errors": errors, "message": message, 'group':group, "groups": groups})
         else:
             # to handle create request
             try:
-                group = Group.objects.create(name=name, organization=organization, members=members, owner=owner)
+                group = Group.objects.create(name=name, organization=organization, members=members, owner=owners)
             except Exception, ex:
                 request.POST.post_type = post_type
                 logger.error("Error occurred while creating group:%s" % str(ex))
                 errors.append("Error while saving data, please try again")
             else:
-                groups = get_groups(request.user, [organization])
                 message = "Group has been successfully created"
-            return render(request, self.template_name, {"groups": groups, "errors": errors, "message": message})
+        groups = get_groups(request.user, [organization])
+        organizations = request.user.organization
+        owners = CustomUser.objects.filter(type=TEACHER, organization__in=request.user.organization)
+        members = Student.objects.filter(organization__in=request.user.organization)
+        return render(request, self.template_name, {"groups": groups, "errors": errors, "message": message, "owners":owners, "members":members, "organizations":organizations})
 
 class TeacherDeleteView(View):
     template_name = 'teacher.html'
 
-    def post(self, request):
+    def get(self, request, teacher_id):
         errors=[]
         message=None
-        try:
-            if self.args:
-                id=self.args[0]
-                teacher = CustomUser.objects.get(id=id)
-                teacher.delete()
+        if teacher_id:
+            try:
+                teacher = CustomUser.objects.get(id=teacher_id)
+                delete_teacher(teacher)
                 message = "Teacher has been successfully deleted"
-            else:
-                errors.append("Please specify teacher id")
-        except Exception, ex:
-            logger.error("Error occurred while teacher deletion: %s" % id)
-            errors.append("Error occurred while teacher deletion")
-        teachers = CustomUser.objects.filter(type=TEACHER, organization__in=request.user.organizations)
-        organizations = request.user.organization
-        groups = get_groups(request.user, organizations)
-        return render(request, self.template_name, {"teachers": teachers, "errors": errors, "message": message, "groups":groups})
+            except Exception, ex:
+                logger.error("Error occurred while teacher deletion: %s" % id)
+                errors.append("Error occurred while teacher deletion")
+        data = get_teacher_view_data(request.user)
+        data.update({"errors": errors, "message": message})
+        return render(request, self.template_name, data)
 
 class ParentsView(View):
     template_name='parents.html'
 
-    def get_parent_view_data(self, request):
-        organizations = request.user.organization
-        groups = get_groups(request.user, organizations)
-        parents = CustomUser.objects.filter(type=PARENT, organization__in=organizations)
-        all_students = Student.objects.filter(organization__in=organizations)
-        students=all_students.filter(parents__in=parents)
-        students_list=[]
-        for parent in parents:
-            temp_list=[]
-            for student in students:
-                if parent in student.parents:
-                    temp_list.append(student)
-            students_list.append(temp_list)
-        parents = zip(parents, students_list)
-        return {"parents":parents, "organizations":organizations, "students": all_students}
-
     def get(self, request):
         # <view logic>
-        data = self.get_parent_view_data(request)
-        print data
+        data = get_parent_view_data(request.user)
         return render(request, self.template_name, data)
 
     def post(self, request, id=None):
@@ -252,94 +218,77 @@ class ParentsView(View):
         if self.args:
             id=self.args[0]
             post_type='update'
-        try:
-            name = request.POST.get('name')
-            msisdn = request.POST.get('msisdn')
-            email = request.POST.get('email')
-            username = request.POST.get('username')
-            student_ids = request.POST.getlist("student_id[]")
-            organization_id = request.POST.get('organization_id')
-            password = request.POST.get('password')
-        except Exception, ex:
-            logger.error("Error: %s" %(str(ex)))
-            errors.append("Required parameter was not there")
-            request.POST.post_type = post_type
-            data = self.get_parent_view_data(request)
-            data.update({'errors':errors})
-            return render(request, self.template_name, data)
+        name = request.POST.get('name')
+        msisdn = request.POST.get('msisdn')
+        email = request.POST.get('email')
+        username = request.POST.get('username')
+        student_ids = request.POST.getlist("student_id[]")
+        organization_id = request.POST.get('organization_id')
+        password = request.POST.get('password')
+
         if not name or not student_ids or not msisdn or not username or not email or not organization_id:
             errors.append("Required parameter was not there")
-            request.POST.post_type = post_type
-            data = self.get_teacher_view_data(request)
-            data.update({'errors':errors})
-            return render(request, self.template_name, data)
-        students = Student.objects.filter(id__in=student_ids)
-        try:
-            organization = Organization.objects.get(id=organization_id)
-        except Exception, ex:
-            errors.append("Organization does not exist")
-            logger.error("Organization does not exist: %s" % organization_id)
-            data = self.get_parent_view_data(request)
-            data.update({'errors':errors, "message": message})
-            return render(request, self.template_name, data)
-        parents=[]
-        if id:
-            # to handle update request
+        if not errors:
             try:
-                parent = CustomUser.objects.get(id=id)
-                update_parent(parent, name, msisdn, organization, type=PARENT, students=students, email=email, password=password)
+                organization = Organization.objects.get(id=organization_id)
             except Exception, ex:
-                logger.error("Error occurred while updating parent for id : %s error:%s" % (id, str(ex)))
-                errors.append("Error occurred while updating record, Please try again")
+                errors.append("Organization does not exist")
+                logger.error("Organization does not exist: %s" % organization_id)
+        if not errors:
+            students = Student.objects.filter(id__in=student_ids)
+            if id:
+                # to handle update request
+                try:
+                    parent = CustomUser.objects.get(id=id)
+                    update_parent(parent, name, msisdn, organization, type=PARENT, students=students, email=email, password=password)
+                except Exception, ex:
+                    logger.error("Error occurred while updating parent for id : %s error:%s" % (id, str(ex)))
+                    errors.append("Error occurred while updating record, Please try again")
+                else:
+                    message = "Parent has been successfully updated"
             else:
-                message = "Parent has been successfully updated"
-                organizations = request.user.organization
-                data = self.get_parent_view_data(request)
-                data.update({"errors": errors, "message": message})
-            return render(request, self.template_name, data)
-        else:
-            # to handle create request
-            try:
-                token = base64.urlsafe_b64encode(os.urandom(8))
-                create_parent(name, msisdn, organization, token=token, students=students, email=email, password=password, username=username)
-            except Exception, ex:
-                request.POST.post_type=post_type
-                logger.error("Error occurred while creating parent:%s" % str(ex))
-                errors.append("Error while saving data, please try again")
-            else:
-                #groups = get_groups(request.user, [organization])
-                organizations = request.user.organization
-                data = self.get_parent_view_data(request)
-                message = "Parent has been successfully created"
-                data.update({"errors": errors, "message": message})
-            return render(request, self.template_name, data)
+                # to handle create request
+                try:
+                    token = base64.urlsafe_b64encode(os.urandom(8))
+                    create_parent(name, msisdn, organization, token=token, students=students, email=email, password=password, username=username)
+                except Exception, ex:
+                    request.POST.post_type=post_type
+                    logger.error("Error occurred while creating parent:%s" % str(ex))
+                    errors.append("Error while saving data, please try again")
+                else:
+                    message = "Parent has been successfully created"
+        request.POST.post_type = post_type
+        data = get_parent_view_data(request.user)
+        data.update({"errors": errors, "message": message})
+        return render(request, self.template_name, data)
 
 class ParentsDeleteView(View):
-    pass
+    template_name = 'parents.html'
+
+    def get(self, request, parent_id):
+        errors=[]
+        message=None
+        if parent_id:
+            try:
+                parent = CustomUser.objects.get(id=parent_id)
+                delete_parent(parent)
+                message = "Parent has been successfully deleted"
+            except Exception, ex:
+                logger.error("Error occurred while parent deletion: %s" % id)
+                errors.append("Error occurred while parent deletion")
+        data = get_parent_view_data(request.user)
+        data.update({"errors": errors, "message": message})
+        return render(request, self.template_name, data)
+
 
 class TeacherView(View):
     template_name='teacher.html'
 
-    def get_teacher_view_data(self, request):
-        organizations = request.user.organization
-        groups = get_groups(request.user, organizations)
-        teachers = CustomUser.objects.filter(type=TEACHER, organization__in=organizations)
-        #members = Student.objects.filter(organization__in=organizations)
-        for teacher in teachers:
-            teacher.groups = get_teacher_owner_group(teacher)
-        return {"teachers":teachers, "groups":groups, "organizations":organizations}
-
-    def get(self, request):
+    def get(self, request, message='', errors=[]):
         # <view logic>
-        teacher_groups=[]
-        organizations = request.user.organization
-        groups = get_groups(request.user, organizations)
-        teachers = CustomUser.objects.filter(type=TEACHER, organization__in=organizations)
-        #members = Student.objects.filter(organization__in=organizations)
-        for teacher in teachers:
-            teacher_groups.append(get_teacher_owner_group(teacher))
-        teachers = zip(teachers, teacher_groups)
-        return render(request, self.template_name, {"teachers":teachers, "groups":groups, "teacher_groups": teacher_groups, "organizations":organizations})
+        data = get_teacher_view_data(request.user)
+        data.update({"message":message, "errors":errors})
+        return render(request, self.template_name, data)
 
     def post(self, request, id=None):
         errors=[]
@@ -348,72 +297,49 @@ class TeacherView(View):
         if self.args:
             id=self.args[0]
             post_type='update'
-        try:
-            name = request.POST.get('name')
-            msisdn = request.POST.get('msisdn')
-            email = request.POST.get('email')
-            username = request.POST.get('username')
-            group_ids = request.POST.getlist("group_id[]")
-            organization_id = request.POST.get('organization_id')
-            password = request.POST.get('password')
-        except Exception, ex:
-            logger.error("Error: %s" %(str(ex)))
-            errors.append("Required parameter was not there")
-            request.POST.post_type = post_type
-            data = self.get_teacher_view_data(request)
-            data.update({'errors':errors})
-            return render(request, self.template_name, data)
+        name = request.POST.get('name')
+        msisdn = request.POST.get('msisdn')
+        email = request.POST.get('email')
+        username = request.POST.get('username')
+        group_ids = request.POST.getlist("group_id[]")
+        organization_id = request.POST.get('organization_id')
+        password = request.POST.get('password')
         if not name or not group_ids or not msisdn or not username or not email or not organization_id:
             errors.append("Required parameter was not there")
             request.POST.post_type = post_type
-            data = self.get_teacher_view_data(request)
-            data.update({'errors':errors})
-            return render(request, self.template_name, data)
         groups = Group.objects.filter(id__in=group_ids)
         try:
             organization = Organization.objects.get(id=organization_id)
         except Exception, ex:
             errors.append("Organization does not exist")
             logger.error("Organization does not exist: %s" % organization_id)
-            data = self.get_teacher_view_data(request)
-            data.update({'errors':errors, "message": message})
-            return render(request, self.template_name, data)
-        teachers=[]
-        if id:
-            # to handle update request
-            try:
-                teacher = CustomUser.objects.get(id=id)
-                update_teacher(teacher, name, msisdn, organization, type=TEACHER, groups=groups, email=email, password=password)
-            except Exception, ex:
-                logger.error("Teacher does not exist :%s" % id)
-                errors.append("Error occurred while updating record, Please try again")
+        if not errors:
+            teachers=[]
+            if id:
+                # to handle update request
+                try:
+                    teacher = CustomUser.objects.get(id=id)
+                    update_teacher(teacher, name, msisdn, organization, type=TEACHER, groups=groups, email=email, password=password)
+                except Exception, ex:
+                    logger.error("Error occurred while updating teacher for id :%s error:%s" % (id, str(ex)))
+                    errors.append("Error occurred while updating record, Please try again")
+                else:
+                    message = "Teacher has been successfully updated"
             else:
-
-                message = "Teacher has been successfully updated"
-                organizations = request.user.organization
-                teachers = CustomUser.objects.filter(type=TEACHER, organization__in=organizations)
-                groups = get_groups(request.user, organizations)
-                for teacher in teachers:
-                    teacher.groups = get_teacher_owner_group(teacher)
-            return render(request, self.template_name, {"errors": errors, "message": message, 'teachers':teachers, "groups":groups})
-        else:
-            # to handle create request
-            try:
-                token = base64.urlsafe_b64encode(os.urandom(8))
-                create_teacher(name, msisdn, organization, token=token, groups=groups, email=email, password=password, username=username)
-            except Exception, ex:
-                request.POST.post_type=post_type
-                logger.error("Error occurred while creating group:%s" % str(ex))
-                errors.append("Error while saving data, please try again")
-            else:
-                #groups = get_groups(request.user, [organization])
-                organizations = request.user.organization
-                teachers = CustomUser.objects.filter(type=TEACHER, organization__in=organizations)
-                groups = get_groups(request.user, organizations)
-                for teacher in teachers:
-                    teacher.groups = get_teacher_owner_group(teacher)
-                message = "Teacher has been successfully created"
-            return render(request, self.template_name, {"teachers": teachers, "errors": errors, "message": message, "groups":groups})
+                # to handle create request
+                try:
+                    token = base64.urlsafe_b64encode(os.urandom(8))
+                    create_teacher(name, msisdn, organization, token=token, groups=groups, email=email, password=password, username=username)
+                except Exception, ex:
+                    request.POST.post_type=post_type
+                    logger.error("Error occurred while creating group:%s" % str(ex))
+                    errors.append("Error while saving data, please try again")
+                else:
+                    message = "Teacher has been successfully created"
+        request.POST.post_type = post_type
+        data = get_teacher_view_data(request.user)
+        data.update({"errors":errors, "message":message})
+        return render(request, self.template_name, data)
 
 
 
@@ -493,17 +419,17 @@ class OrganizationView(View):
 
 @csrf_exempt
 def login_view(request):
+    redirect_to = request.GET.get('next')
     if request.method == "POST":
         try:
             password =request.POST.get("password")
-            password = 'CYOzgG27aAM='
-
             user = CustomUser.objects.get(username=request.POST.get('username'))
-            if user.check_password('123'):
-            #if user:
+            if user.check_password(password):
                 user.backend = 'mongoengine.django.auth.MongoEngineBackend'
                 login(request, user)
                 request.session.set_expiry(60 * 60 * 1) # 1 hour timeout
+                if redirect_to:
+                    return HttpResponseRedirect(redirect_to)
                 return HttpResponseRedirect('/dashboard/')
             else:
                 return HttpResponse('login failed')
@@ -511,7 +437,8 @@ def login_view(request):
             return HttpResponse('user does not exist')
         except Exception, ex:
             return HttpResponse('unknown error')
-    return render(request, "login.html", {})
+    app_path=request.get_full_path()
+    return render(request, "login.html", {"app_path":app_path})
 
 def logout_view(request):
     logout(request)
@@ -528,7 +455,10 @@ class AttendanceView(View):
     template_name='attendance.html'
 
     def get(self, request):
-        return render(request, self.template_name, {})
+        import ipdb;ipdb.set_trace()
+        groups = Group.objects.filter(owner=request.user)
+        students = Student.objects.filter(group__in=groups)
+        return render(request, self.template_name, {"students":students, "groups":groups})
 
 
 

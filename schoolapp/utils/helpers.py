@@ -46,7 +46,7 @@ def get_base64_encode(object_id):
 
 def create_teacher(name, msisdn, organization, token, username, groups=[], email='', password=''):
     try:
-        user = CustomUser(first_name=name, last_name=name, msisdn=msisdn, type=TEACHER, organization=[organization], token=token, username=username)
+        user = CustomUser(first_name=name, last_name=name, msisdn=msisdn, type=TEACHER, organization=[organization], email=email, token=token, username=username)
         user.set_password(password)
         user.save()
         for group in groups:
@@ -63,17 +63,14 @@ def create_teacher(name, msisdn, organization, token, username, groups=[], email
         logging.error("Error occurred while creating/updating teacher, name: %s, msisdn:%s, error:%s" %(name, msisdn, str(ex)))
         raise OperationError("Error occurred while creating/updating teacher, name: %s, msisdn:%s" %(name, msisdn))
 
-def update_teacher(teacher, name, msisdn, organization, token, type=TEACHER, groups=[], email='', password=''):
+def update_teacher(teacher, name, msisdn, organization, token='', type=TEACHER, groups=[], email='', password=''):
     try:
-        import ipdb;ipdb.set_trace()
-        #user = CustomUser.objects.get(msisdn=msisdn, type=type)
-        #user.groups = list(set(user.groups.append(groups)))
         if organization:
-            teacher.organization=organization
+            teacher.organization=[organization]
         if token:
             teacher.token = token
         if name:
-            teacher.name = name
+            teacher.first_name = name
         if email:
             teacher.email = email
         if password:
@@ -111,10 +108,10 @@ def add_parent_to_student(parent, students=[]):
         logging.error("Error occurred while adding parent in student table, parent: %s, students:%s, error:%s" %(parent.id, json.dumps(students), str(ex)))
         raise OperationError("Error occurred while adding parent in student table, parent: %s, students:%s" %(parent.id, json.dumps(students)))
 
-def update_parent(parent, name, msisdn, organization, token, type=PARENT, students=[], email='', password=''):
+def update_parent(parent, name, msisdn, organization, token='', type=PARENT, students=[], email='', password=''):
     try:
         if organization:
-            parent.organization=organization
+            parent.organization=[organization]
         if token:
             parent.token = token
         if name:
@@ -242,5 +239,49 @@ def get_students(organization):
 
 def get_teacher_owner_group(teacher):
     return Group.objects.filter(owner=teacher)
+
+def get_group_list(user):
+    organizations = user.organization
+    groups = get_groups(user, organizations)
+    owners = CustomUser.objects.filter(type=TEACHER, organization__in=organizations)
+    members = Student.objects.filter(organization__in=organizations)
+    return {"groups":groups, "organizations":organizations, "owners":owners, "members":members}
+
+def get_teacher_view_data(user):
+    teacher_groups=[]
+    organizations = user.organization
+    groups = get_groups(user, organizations)
+    teachers = CustomUser.objects.filter(type=TEACHER, organization__in=organizations)
+    for teacher in teachers:
+        teacher_groups.append(get_teacher_owner_group(teacher))
+    teachers = zip(teachers, teacher_groups)
+    return {"teachers":teachers, "groups":groups, "teacher_groups": teacher_groups, "organizations":organizations}
+
+def delete_teacher(teacher):
+    Group.objects(owner=teacher).update(pull__owner=teacher)
+    teacher.delete()
+
+def get_parent_view_data(user):
+    organizations = user.organization
+    groups = get_groups(user, organizations)
+    parents = CustomUser.objects.filter(type=PARENT, organization__in=organizations)
+    all_students = Student.objects.filter(organization__in=organizations)
+    students=all_students.filter(parents__in=parents)
+    students_list=[]
+    for parent in parents:
+        temp_list=[]
+        for student in students:
+            if parent in student.parents:
+                temp_list.append(student)
+        students_list.append(temp_list)
+    parents = zip(parents, students_list)
+    return {"parents":parents, "organizations":organizations, "students": all_students}
+
+def delete_parent(parent):
+    Student.objects(parents=parent).update(pull__parents=parent)
+    parent.delete()
+
+
+
 
 
