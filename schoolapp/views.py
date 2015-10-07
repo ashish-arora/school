@@ -1,5 +1,4 @@
 from django.shortcuts import render
-from .models import User
 from rest_framework import status
 from rest_framework.exceptions import ValidationError, AuthenticationFailed, ParseError
 from rest_framework.exceptions import APIException
@@ -10,7 +9,7 @@ from utils import log
 from mongoengine.errors import NotUniqueError
 from mongoengine.errors import DoesNotExist
 import base64, os
-from models import User, Organization, Group, Student
+from models import Organization, Group, Student,CustomUser
 # Create your views here.
 from models import VALID_TYPES, VALID_COUNTRY, VALID_ATTENDANCE_TYPES
 from models import ADMIN, TEACHER, STUDENT, PARENT
@@ -160,14 +159,18 @@ class AccountLogin(APIView):
 
 
     def show_groups(self, user):
-        #preparing data {'class1':[{'name1':'roll1'}, {'name2':'roll2'}], 'class2':[{'name1':'roll1'},..],..}
-        group_ids = []
-        result_dict = {}
         groups = Group.objects.filter(owner=user)
+        group_list=[]
         for group in groups:
-            result_dict[group.name]={}
+            group_dict={'class_id':str(group.id),'class_name':group.name}
+            members=[]
             for student in group.members:
-                result_dict[group.name].update({student.name : student.roll_no})
+                student_dict={"student_id":str(student.id), "first_name":student.first_name, "last_name":student.last_name,"roll_no":student.roll_no}
+                members.append(student_dict)
+            group_dict.update({"members":members})
+            group_list.append(group_dict)
+
+        result_dict={"class":group_list}
         return result_dict
 
     def show_teachers(self, user):
@@ -190,6 +193,8 @@ class AccountLogin(APIView):
                 type: string
             msisdn:
                 required: true
+                type: string
+            devices:
                 type: string
 
         serializer: UserLoginSerializer
@@ -219,7 +224,7 @@ class AccountLogin(APIView):
             except Exception, ex:
                 raise ParseError("Invalid json data: %s" % devices)
         try:
-            user = User.objects.get(msisdn=msisdn, token=token)
+            user = CustomUser.objects.get(msisdn=msisdn, token=token)
         except Exception, ex:
             raise AuthenticationFailed("Invalid credentials,msisdn:%s, token:%s, type:%s" %(msisdn, token))
 
@@ -284,7 +289,7 @@ class AccountPinValidation(APIView):
             raise ValidationError("Msisdn is not provided")
         user = None
         try:
-            user = User.objects.get(msisdn=msisdn)
+            user = CustomUser.objects.get(msisdn=msisdn)
         except Exception, ex:
             raise AuthenticationFailed("Invalid credentials for msisdn:%s" %(msisdn))
         pincode = random.randint(1000,9999)
@@ -295,7 +300,39 @@ class AccountPinValidation(APIView):
         QueueRequests.enqueue(SMS_QUEUE, {'msisdn': msisdn, 'message': PIN_MSG})
         return JSONResponse({"stat": "ok"})
 
+
+
     def post(self,request):
+        """
+        Pin validation and Login
+
+        ---
+        # YAML (must be separated by `---`)
+
+        type:
+            msisdn:
+                required: true
+                type: string
+            pin:
+                required: true
+                type: string
+            devices:
+                required: true
+                type: string
+
+        serializer: UserLoginSerializer
+        omit_serializer: true
+
+        parameters_strategy: merge
+        omit_parameters:
+            - path
+
+        responseMessages:
+            - code: 200
+              message: Successfully Logged in
+            - code: 400
+              message: Bad Request
+        """
         try:
             msisdn = request.data.get('msisdn')
             pincode = int(request.data.get('pin'))
@@ -304,11 +341,11 @@ class AccountPinValidation(APIView):
             raise ValidationError("Parameters are not in correct format: %s" % str(ex))
         key = "pincodes-"+str(msisdn)
         cache_pin = int(cache.get(key))
-        cache.delete(key)
+        #cache.delete(key)   INFO: Not deleting pin as of now. Let it expire on its own
         if cache_pin == pincode or pincode == 4141:
             user = None
             try:
-                user = User.objects.get(msisdn=msisdn)
+                user = CustomUser.objects.get(msisdn=msisdn)
             except Exception, ex:
                 raise AuthenticationFailed("Invalid credentials for msisdn:%s" %(msisdn))
             token = base64.urlsafe_b64encode(os.urandom(8))
@@ -372,7 +409,7 @@ class Attendance(APIView):
             if is_present not in VALID_ATTENDANCE_TYPES:
                 raise ValidationError("Invalid attendance type : %s " %(attendance_data))
             try:
-                student = User.objects.get(id=student_id)
+                student = CustomUser.objects.get(id=student_id)
             except DoesNotExist, ex:
                 raise DoesNotExist("Student id does not exist: %s" % student_id)
 
@@ -563,8 +600,8 @@ class OrganizationView(APIView):
         try:
             organizations = Organization.objects.all()
         except Exception, ex:
-            logger.error("Error occurred while creating organization doc: %s, name: %s, country:%s, city: %s, state:%s, address:%s " % (str(ex), name, country, city, state, address))
-            raise APIException("Error while saving data")
+            logger.error("Error occurred while fetching all organization ")
+            raise APIException("Error occurred while fetching all organization")
         else:
             serializer = OrganizationSerializer(organizations, many=True)
             return JSONResponse(serializer.data, status=200)
@@ -665,6 +702,12 @@ class StudentDeleteView(APIView):
         else:
             return JSONResponse({"stat":"ok"})
 
+class PingWebHandler(APIView):
+    def get(self,request):
+        return JSONResponse({'stat':'pong'})
+
+    def post(self,request):
+        return JSONResponse({'stat':'pong'})
 
 class DashboardBootGridView(APIView):
     #@authenticate_user
