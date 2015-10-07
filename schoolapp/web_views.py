@@ -11,16 +11,17 @@ from django.contrib.auth import login, logout
 from mongoengine.django.auth import User
 from mongoengine.django.mongo_auth import models
 from mongoengine.queryset import DoesNotExist
-from schoolapp.models import Organization, Student, Group, CustomUser
+from schoolapp.models import Organization, Student, Group, CustomUser, Attendance, AttendanceSummary
 import bson, base64, random, os
 BASE64_URLSAFE="-_"
 from utils import log
 from forms import OrganizationForm
-import json
+import json, time
+from datetime import datetime, timedelta
 from models import TEACHER, PARENT
 from utils.helpers import get_groups, create_teacher, update_teacher, get_teacher_owner_group,\
     get_students, create_student, update_student, create_parent, update_parent, get_group_list, get_teacher_view_data, \
-    delete_teacher, get_parent_view_data, delete_parent
+    delete_teacher, get_parent_view_data, delete_parent, get_attendance_data
 
 
 logger = log.Logger.get_logger(__file__)
@@ -454,10 +455,58 @@ class AttendanceView(View):
     template_name='attendance.html'
 
     def get(self, request):
-        import ipdb;ipdb.set_trace()
-        groups = Group.objects.filter(owner=request.user)
-        students = Student.objects.filter(group__in=groups)
-        return render(request, self.template_name, {"students":students, "groups":groups})
+        data = get_attendance_data(request.user)
+        return render(request, self.template_name, data)
 
+    def post(self, request):
+        import ipdb;ipdb.set_trace()
+        errors=[]
+        message=""
+        group_id = request.POST.get('group_id')
+        date_selected = request.POST.get('date')
+        student_ids = request.POST.getlist('student_ids[]')
+        if not group_id or not date_selected or not student_ids:
+            errors.append("Required Parameter is not there")
+        now = datetime.now()
+        today = now.date()
+        next_day  = today + timedelta(days=1)
+        start = int(time.mktime(today.timetuple()))
+        end = int(time.mktime(next_day.timetuple()))
+        show_attendance=True
+        if not errors:
+            group = Group.objects.get(id=group_id)
+            attendances = AttendanceSummary.objects.filter(group=group, ts__gte=start, ts__lte=end)
+            if attendances:
+                message="Attendance already happened for the day"
+                show_attendance=False
+            else:
+                students_present=[]
+                students_absent=[]
+                students = Student.objects.filter(group=group)
+                for student in students:
+                    if str(student.id) in student_ids:
+                        students_present.append(student)
+                    else:
+                        students_absent.append(student)
+                epoch_time = int(time.time())
+                attendance_doc=[]
+                present_count, absent_count=0,0
+                for student in students_present:
+                    attendance_doc.append(Attendance(student=student, present=1, ts=epoch_time))
+                    present_count+=1
+                for student in students_absent:
+                    attendance_doc.append(Attendance(student=student, present=0, ts=epoch_time))
+                    absent_count+=1
+                try:
+                    Attendance.objects.insert(attendance_doc)
+                    AttendanceSummary.objects.create(group=group, present=present_count, absent=absent_count, ts=epoch_time)
+                except Exception, ex:
+                    logger.error("Error occurred while saving attendance for group_id: %s, student_ids :%s, error:%s" %(group_id, student_ids, str(ex)))
+                    errors.append("Error occurred while saving attendance, Please try again")
+                else:
+                    message="Attendance has been successfully submitted"
+        data = get_attendance_data(request.user)
+        data.update({"show_attendance":show_attendance, "message":message, "errors":errors})
+        return render(request, self.template_name, data)
 
 

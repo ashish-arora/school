@@ -64,7 +64,9 @@
                 $('#myModal').modal('show');
             });
 
-            $('#datetimepicker1').datepicker();
+            $('#datetimepicker1').datetimepicker({
+                defaultDate: new Date()
+                });
         });
     </script>
 
@@ -194,10 +196,10 @@
                             </div>
                         </div>
                         <div class="row">
-                            <form role="form" style="margin-left:10%; margin-right:10%;">
-
+                            <form role="form" style="margin-left:10%; margin-right:10%;" method="post" action="/attendance/">
+                                {% csrf_token %}
                                 <div class="form-group">
-                                    <label for="inputclass" class="control-label col-sm-3">Select Class:</label>
+                                    <label for="inputclass" class="control-label col-sm-3" style="padding-left:10%;padding-top:7px;">Select Class:</label>
                                     <div class="col-sm-3">
                                         <select class="form-control" name="group_id" id="inputgroup">
                                             {% for group in groups %}
@@ -207,11 +209,12 @@
                                     </div>
                                 </div>
                                 <div class="form-group">
-                                    <label for="inputdata" class="control-label col-sm-3">Select Date:</label>
+                                    <label for="inputdata" class="control-label col-sm-3" style="width:15%; padding-top:7px;">Select Date:</label>
                                     <div class="input-group date col-sm-3" id='datetimepicker1'>
-                                        <input type='text' class="form-control" />
+                                        <input type='text' name="date" class="form-control" />
                                         <span class="input-group-addon">
-                                            <span class="glyphicon glyphicon-calendar"></span>
+                                            <!--<span class="glyphicon glyphicon-calendar"></span>-->
+                                            <span class="fa fa-calendar"></span>
                                         </span>
                                     </div>
                                 </div>
@@ -232,13 +235,13 @@
 
                                     {% for student in students %}
                                         <tr id='{{student.id}}'>
-                                        <td>{{student.name}}</td>
+                                        <td>{{student.first_name}}</td>
                                         <td>{{student.roll_no}}</td>
-                                        <td>
+                                        <td style="padding:0px;">
                                             <div class="form-group">
                                                 <div class="col-sm-offset-2">
                                                     <div class="checkbox">
-                                                        <input type="checkbox" name='{{student.id}}'>
+                                                        <input type="checkbox" name='student_ids[]' value="{{student.id}}">
                                                     </div>
                                                 </div>
                                             </div>
@@ -252,10 +255,12 @@
                             </table>
                         </div>
                         </div>
+                        <div class="row">
                         <div class="form-group">
-                            <div class="col-sm-offset-2 col-sm-10">
-                                <button type="submit" class="btn btn-primary">Submit</button>
-                            </div>
+                            <!--<div class="col-sm-offset-2 col-sm-10" style="float:right;">-->
+                                <button type="submit" class="btn btn-primary btn-md" style="float:right; width:20%;">Submit</button>
+                            <!--</div>-->
+                        </div>
                         </div>
                         </form>
                         </div>

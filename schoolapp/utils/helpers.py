@@ -281,6 +281,11 @@ def delete_parent(parent):
     Student.objects(parents=parent).update(pull__parents=parent)
     parent.delete()
 
+def get_attendance_data(user):
+    groups = Group.objects.filter(owner=user)
+    students = Student.objects.filter(group__in=groups)
+    return {"students":students, "groups":groups}
+
 
 
 
