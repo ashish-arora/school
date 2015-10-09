@@ -62,6 +62,7 @@ urlpatterns = patterns('',
     url(r'^manageuser/parent/delete/(.*)/', login_required(web_views.ParentsDeleteView.as_view(), login_url='/login/')),
     url(r'^manageuser/parent/(.*)/', login_required(web_views.ParentsView.as_view(), login_url='/login/')),
     url(r'^manageuser/parent', login_required(web_views.ParentsView.as_view(), login_url='/login/')),
+    url(r'^home/', web_views.WebSiteView.as_view()),
 
     url(r'^attendance/', login_required(web_views.AttendanceView.as_view(), login_url='/login/')),
 

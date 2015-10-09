@@ -509,4 +509,16 @@ class AttendanceView(View):
         data.update({"show_attendance":show_attendance, "message":message, "errors":errors})
         return render(request, self.template_name, data)
 
+class WebSiteView(View):
+    template_name='single_page.html'
+
+    def get(self, request):
+        # <view logic>
+
+        return render(request, self.template_name)
+
+
+
+
+
 
