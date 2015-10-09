@@ -91,3 +91,9 @@ class Attendance(Document):
     meta={
         'indexes': ['ts', 'student']
     }
+
+class AttendanceSummary(Document):
+    group=ReferenceField('Group')
+    ts=IntField(default=int(time.time()))
+    present=IntField(required=True)
+    absent=IntField(required=True)

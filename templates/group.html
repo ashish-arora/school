@@ -20,20 +20,35 @@
                 $('#myModal').modal('show');
             {% endif %}
 
+            function set_selected_owner_option(list_data){
+                for (i = 0; i < list_data.length; i++) {
+                     $('#inputOwners option[value=' + list_data[i] + ']').attr('selected', true);
+                };
+            }
+
+            function set_selected_member_option(list_data){
+                for (i = 0; i < list_data.length; i++) {
+                     $('#inputMembers option[value=' + list_data[i] + ']').attr('selected', true);
+                };
+            }
+
             $(".edit_btn").click(function() {
                 var group_id = $(this).attr("value");
                 console.log("Group id is " + group_id);
-                $("#inputname").val($("#" + group_id).find('td').eq(0).html());
                 $("#modal_form").attr('action', '/group/' + group_id + '/');
+                $("#inputname").val($("#" + group_id).find('td').eq(0).html());
                 $("#errors_div").val('');
                 $("#myModalLabel").text("Edit Class");
+                set_selected_owner_option(group_owner_map[group_id]);
+                set_selected_member_option(group_member_map[group_id]);
+                $("#inputOrganization").val(group_organization_map[group_id]);
                 $('#myModal').modal('show');
             });
 
             $(".remove_btn").click(function(){
                 var group_id = $(this).attr("value");
                 console.log("Group id is " + group_id);
-                $.post("/api/v1/group/delete/",{"group_id": group_id, "csrfmiddlewaretoken": '{{csrf_token}}'}, function(data, status){
+                $.post("/group/delete/",{"group_id": group_id, "csrfmiddlewaretoken": '{{csrf_token}}'}, function(data, status){
                     alert("Successfully removed the group");
                     $('#' + group_id).remove();
                 })
@@ -48,10 +63,83 @@
                 console.log("inside add");
                 $("#modal_form").attr('action', '/group/');
                 $("#inputname").val('');
+                $("option:selected").removeAttr("selected");
+                $('select').val('');
                 $("#errors_div").html('');
                 $("#myModalLabel").text("Add Class");
                 $('#myModal').modal('show');
             });
+
+            function get_html_group_data(list_data){
+                var htm = "";
+                for (i = 0; i < list_data.length; i++) {
+                    htm += "<a class='btn btn-info btn-sm org-show' role='button' style='margin:3px 3px 3px 3px;'>" + list_data[i] + "</a>";
+                };
+                return htm;
+            }
+
+            $(".member-show").click(function(){
+                console.log("inside member show");
+                var member_id = $(this).attr("value");
+                console.log(member_id);
+                console.log(member_data[member_id]);
+                console.log(member_data[member_id]['name']);
+                $("#inputmemberfirstname").val(member_data[member_id]['first_name']);
+                $("#inputmemberlastname").val(member_data[member_id]['last_name']);
+                $("#inputcity").val(member_data[member_id]['city']);
+                $("#inputrollno").val(member_data[member_id]['rollno']);
+                $("#modal_parent_data").html(get_html_group_data(member_data[member_id]['parents']));
+                $("#modal_organization_data").html(get_html_group_data(member_data[member_id]['organization']));
+                $('#myMemberModal').modal('show');
+            });
+
+            $(".teacher-show").click(function(){
+                console.log(" inside teacher show");
+                var teacher_id = $(this).attr("value");
+                console.log(teacher_data[teacher_id]);
+                $("#teacher_name").val(teacher_data[teacher_id]['name']);
+                $("#teacher_email").val(teacher_data[teacher_id]['email']);
+                $("#teacher_msisdn").val(teacher_data[teacher_id]['msisdn']);
+                $("#organization_data").html(get_html_group_data(teacher_data[teacher_id]['organization']));
+                $('#myTeacherModal').modal('show');
+            });
+
+            var member_data = {};
+            var teacher_data = {};
+            var group_owner_map={};
+            var group_member_map={};
+            var group_organization_map={};
+            {% for group in groups %}
+                group_organization_map['{{group.id}}']='{{group.organization.id}}';
+                group_member_map['{{group.id}}']=[];
+                {% for member in group.members %}
+                    group_member_map['{{group.id}}'].push('{{member.id}}');
+                    member_data['{{member.id}}'] = {};
+                    member_data['{{member.id}}']['first_name'] = '{{member.first_name}}';
+                    member_data['{{member.id}}']['last_name'] = '{{member.last_name}}';
+                    member_data['{{member.id}}']['roll_no'] = '{{member.roll_no}}';
+                    member_data['{{member.id}}']['parents']=[]
+                    {% for parent in member.parents %}
+                        member_data['{{member.id}}']['parents'].push('{{parent.first_name}}');
+                    {% endfor %}
+                    member_data['{{member.id}}']['organization'] = '{{member.organization.name}}';
+                {% endfor %}
+                group_owner_map['{{group.id}}']=[];
+                {% for teacher in group.owner %}
+                    group_owner_map['{{group.id}}'].push('{{teacher.id}}');
+                    teacher_data['{{teacher.id}}'] = {};
+                    teacher_data['{{teacher.id}}']['name'] = '{{teacher.first_name}}';
+                    teacher_data['{{teacher.id}}']['email']='{{teacher.email}}';
+                    teacher_data['{{teacher.id}}']['msisdn']='{{teacher.msisdn}}';
+                    teacher_data['{{teacher.id}}']['organization'] =[];
+                    {% for organization in teacher.organization %}
+                        teacher_data['{{teacher.id}}']['organization'].push('{{organization.name}}');
+                    {% endfor %}
+                {% endfor %}
+            {% endfor %}
+            console.log("member data", member_data);
+            console.log("teacher data", teacher_data);
+
         });
     </script>
 
@@ -103,12 +191,12 @@
 <div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
   <div class="modal-dialog" role="document">
     <div class="modal-content">
-      <div class="modal-header">
+      <div class="modal-header add-bg-color">
         <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-        <h4 class="modal-title" id="myModalLabel">Add Class Info</h4>
+        <h4 class="modal-title white-heading" id="myModalLabel">Add Class Info</h4>
       </div>
       <div class="modal-body">
-        <form class="form-horizontal" method="post">
+        <form class="form-horizontal" id="modal_form" method="post">
             {% csrf_token %}
             <div id="errors_div">
                 {% if errors %}
@@ -122,14 +210,14 @@
             <div class="form-group">
                 <label for="inputEmail3" class="col-sm-2 control-label">Name</label>
                 <div class="col-sm-10">
-                    <input type="text" name="name" class="form-control" id="inputName" placeholder="Name">
+                    <input type="text" name="name" class="form-control" id="inputname" placeholder="Name">
                 </div>
             </div>
 
             <div class="form-group">
                 <label for="group" class="col-sm-2 control-label">Organization</label>
                 <div class="col-sm-10">
-                    <select class="form-control" name="organization_id" id="inputgroup">
+                    <select class="form-control" name="organization_id" id="inputOrganization">
                         {% for organization in organizations %}
                             <option value="{{organization.id}}">{{organization.name}}</option>
                         {% endfor %}
@@ -140,9 +228,9 @@
             <div class="form-group">
                 <label for="inputEmail3" class="col-sm-2 control-label">Members</label>
                 <div class="col-sm-10">
-                    <select multiple class="form-control" name="member_id" id="inputMembers">
+                    <select multiple class="form-control" name="member_id[]" id="inputMembers">
                         {% for member in members %}
-                            <option value="{{member.id}}">{{member.name}}</option>
+                            <option value="{{member.id}}">{{member.first_name}}</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -150,9 +238,9 @@
             <div class="form-group">
                 <label for="inputPassword3" class="col-sm-2 control-label">Owner</label>
                 <div class="col-sm-10">
-                    <select multiple class="form-control" name="owner_id" id="inputOwners">
+                    <select multiple class="form-control" name="owner_id[]" id="inputOwners">
                         {% for owner in owners %}
-                            <option value="{{owner.id}}">{{owner.name}}</option>
+                            <option value="{{owner.id}}">{{owner.first_name}}</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -168,7 +256,7 @@
             </div>
             <div class="form-group">
                 <div class="col-sm-offset-2 col-sm-10">
-                    <button type="submit" class="btn btn-default">Submit</button>
+                    <button type="submit" class="btn btn-primary">Submit</button>
                 </div>
             </div>
         </form>
@@ -179,7 +267,111 @@
       </div>
     </div>
   </div>
-</div><!-- Modal --></div>
+</div><!-- Modal -->
+                    <!-- Teacher Modal -->
+<div class="modal fade" id="myTeacherModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header add-bg-color">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title white-heading" id="myModalLabel">Class Info</h4>
+      </div>
+      <div class="modal-body">
+        <form class="form-horizontal" method="post">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="inputEmail3" class="col-sm-2 control-label">Name</label>
+                <div class="col-sm-10">
+                    <input type="text" name="teacher_name" class="form-control" id="teacher_name" placeholder="Name" readonly>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="inputEmail3" class="col-sm-2 control-label">Organization</label>
+                <div class="col-sm-10" id="organization_data">
+                    <input type="text" name="organization_name" class="form-control" id="organization_name" placeholder="Organization" readonly>
+                </div>
+            </div>
+
+
+            <div class="form-group">
+                <label for="inputEmail3" class="col-sm-2 control-label">Email</label>
+                <div class="col-sm-10" id="modal_member_data">
+                    <input type="text" name="email_name" class="form-control" id="teacher_email" placeholder="Email" readonly>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="inputPassword3" class="col-sm-2 control-label">Msisdn</label>
+                <div class="col-sm-10" id="modal_owner_data">
+                    <input type="text" name="msisdn_name" class="form-control" id="teacher_msisdn" placeholder="Msisdn" readonly>
+                </div>
+            </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div><!-- Teacher Modal -->
+
+<!-- Member Modal -->
+<div class="modal fade" id="myMemberModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header add-bg-color">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title white-heading" id="myOrganizationLabel">Members Info</h4>
+      </div>
+      <div class="modal-body">
+        <form class="form-horizontal" method="post">
+            {% csrf_token %}
+
+            <div class="form-group">
+                <label for="inputEmail3" class="col-sm-2 control-label">Name</label>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" name="first_name" id="inputmemberfirstname" placeholder="First Name" readonly>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="inputEmail3" class="col-sm-2 control-label">Last Name</label>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" name="last_name" id="inputmemberlastname" placeholder="Last Name" readonly>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="inputEmail3" class="col-sm-2 control-label">Roll No</label>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" id="inputrollno" name="rollno" placeholder="Roll No"readonly>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="inputEmail3" class="col-sm-2 control-label">Organization</label>
+                <div class="col-sm-10" id="modal_organization_data">
+                    <input type="text" class="form-control" name="state" placeholder="Organization" readonly>
+                </div>
+            </div>
+            <div class="form-group" >
+                <label for="inputPassword3" class="col-sm-2 control-label">Parents</label>
+                <div class="col-sm-10" id="modal_parent_data">
+                    <input type="text" class="form-control" name="address" placeholder="Parents" readonly>
+                </div>
+            </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div><!-- Member Modal -->
+
+
+
+
+
+
+                            </div>
                         </div>
                         <div class="row">
                         <div class="table-responsive col">
@@ -198,8 +390,16 @@
                                         <tr id='{{group.id}}'>
                                         <td>{{group.name}}</td>
                                         <td>{{group.organization.name}}</td>
-                                        <td>{{group.members}}</td>
-                                        <td>{{group.owner}}</td>
+                                        <td>
+                                            {% for member in group.members %}
+                                                <a class="btn btn-info btn-sm member-show" value='{{member.id}}' role="button">{{member.first_name}}</a>
+                                            {% endfor %}
+                                        </td>
+                                        <td>
+                                             {% for teacher in group.owner %}
+                                                <a class="btn btn-info btn-sm teacher-show" value='{{teacher.id}}' role="button">{{teacher.first_name}}</a>
+                                            {% endfor %}
+                                        </td>
 
                                             <td><button type="button" style="width:45%;"  value='{{group.id}}' class="btn btn-success edit_btn">Edit</button>
                                             <button type="button" style="width:45%;"  value='{{group.id}}' class="btn btn-info remove_btn">Remove</button></td>

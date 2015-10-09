@@ -20,8 +20,9 @@
     <!-- Custom Fonts -->
     <link href="/static/dashboard/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css">
 
-    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.3.0/css/datepicker.min.css" />
-    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.3.0/css/datepicker3.min.css" />
+    <!--<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.3.0/css/datepicker.min.css" />
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.3.0/css/datepicker3.min.css" />-->
+    <link rel="stylesheet" href="https://cdn.rawgit.com/Eonasdan/bootstrap-datetimepicker/e8bddc60e73c1ec2475f827be36e1957af72e2ea/build/css/bootstrap-datetimepicker.css" />
 
 
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
@@ -150,7 +151,7 @@
                         </li>
                         <li class="divider"></li>
                         <li>
-                            <a href="#"><i class="fa fa-fw fa-power-off"></i> Log Out</a>
+                            <a href="/logout/"><i class="fa fa-fw fa-power-off"></i> Log Out</a>
                         </li>
                     </ul>
                 </li>
@@ -168,7 +169,7 @@
                         <a href="/teacher/"><i class="fa fa-fw fa-bar-chart-o"></i> Teacher</a>
                     </li>
                     <li>
-                        <a href="/class/"><i class="fa fa-fw fa-bar-chart-o"></i> Class</a>
+                        <a href="/group/"><i class="fa fa-fw fa-bar-chart-o"></i> Class</a>
                     </li>
                     <li>
                         <a href="/organization/"><i class="fa fa-fw fa-bar-chart-o"></i> Organization</a>
@@ -214,7 +215,9 @@
     <!-- Bootstrap Core JavaScript -->
     <script src="/static/dashboard/js/bootstrap.min.js"></script>
         <!-- Include Bootstrap Datepicker -->
-    <script src="//cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.3.0/js/bootstrap-datepicker.min.js"></script>
+    <!--<script src="//cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.3.0/js/bootstrap-datepicker.min.js"></script>-->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.9.0/moment-with-locales.js"></script>
+    <script src="https://cdn.rawgit.com/Eonasdan/bootstrap-datetimepicker/e8bddc60e73c1ec2475f827be36e1957af72e2ea/src/js/bootstrap-datetimepicker.js"></script>
 
     {% block javascript %}
     {% endblock javascript %}
