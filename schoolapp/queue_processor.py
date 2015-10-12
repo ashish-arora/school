@@ -12,10 +12,10 @@ from gevent import monkey, greenlet
 from school.settings import NOTIFICATION_QUEUE,GCM_APIKEY,GCM_PROJECT_ID,GCM_QUEUE,SMS_QUEUE,smsgw_ssd_url,ssd_auth_key,ssd_sender_id
 from schoolapp.utils.jabber_client import JabberClient
 from gcm.gcm import GCM
-from models import User
+from models import CustomUser
 import requests
 from school.settings import REDIS_CONN as cache
-
+from school.settings import STATUS_UPDATE_QUEUE
 monkey.patch_all()
 
 logging = log.Logger.get_logger(__file__)
@@ -129,7 +129,7 @@ class GcmPush(object):
         msisdn = data.get('msisdn')
         user = None
         try:
-            user=User.objects.get(msisdn)
+            user=CustomUser.objects.get(msisdn)
         except Exception as e:
             logging.exception("GCM push send failed to this msisdn : %s", msisdn)
             return
@@ -151,6 +151,19 @@ class SendSms(object):
         payload = {'authkey': ssd_auth_key, 'mobiles': msisdn, 'message':message,'sender':ssd_sender_id,'route':'4'}
         r = requests.get(smsgw_ssd_url,params=payload)
         logging.debug(r.text)
+
+class StatusUpdate(object):
+    queue=STATUS_UPDATE_QUEUE
+
+    @staticmethod
+    def perform(data):
+        to_users = data.get("to_users")
+        data = data.get("data","")
+        if data:
+            for user in to_users:
+                if user.msisdn:
+                    GcmPush.perform({"msisdn": user.msisdn, "message": data})
+                    logging.info("Status Update gcm push for msisdn: %s" % user.msisdn)
 
 if __name__ == '__main__':
     queues = {NOTIFICATION_QUEUE: 5, GCM_QUEUE: 5}

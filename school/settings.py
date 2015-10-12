@@ -140,6 +140,7 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 ####### Queues ########
 NOTIFICATION_QUEUE = 'notification'
 SMS_QUEUE = 'sms'
+STATUS_UPDATE_QUEUE="status-update"
 
 ###### JABBER SETTINGS ##########
 ADMIN_JID=''
@@ -157,3 +158,14 @@ GCM_PROJECT_ID = "<gcm_project_id>"
 ssd_sender_id = 'SCCHAP'
 smsgw_ssd_url = 'http://sms.ssdindia.com/api/sendhttp.php'
 ssd_auth_key = '9218AIpGhQJkUvJc55f57357'
+
+amazon_s3_config={'staging':{'status_upload_store': 'status-staging-upload-store'}, 'prod': {'status_upload_store': 'status-prod-upload-store'}}
+
+
+AWS_ACCESS_KEY_ID = 'AKIAIKMAQXKFTMLDRSJA'
+AWS_SECRET_ACCESS_KEY = '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'
+S3_CONTENT_BUCKET = 'S3_CONTENT_BUCKET'
+#FILE_EXPIRY_TIME = int(604800)#7*24*3600
+#FILE_EXPIRY_DELTA = 2 #in hrs
+STATUS_UPLOAD_STORE = amazon_s3_config['staging']['status_upload_store']
+#IMAGE_UPLOAD_STORE = amazon_s3_config['staging']['status_upload_store']

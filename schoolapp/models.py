@@ -97,3 +97,10 @@ class AttendanceSummary(Document):
     ts=IntField(default=int(time.time()))
     present=IntField(required=True)
     absent=IntField(required=True)
+
+class Status(Document):
+    user = ReferenceField(CustomUser)
+    message = StringField()
+    ts=IntField(default=int(time.time()))
+    thumbnail=StringField()
+    image_key=StringField()

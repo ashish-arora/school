@@ -518,6 +518,39 @@ class WebSiteView(View):
         return render(request, self.template_name)
 
 
+class NewLoginView(View):
+    template_name='new_login.html'
+
+    def get(self, request):
+        # <view logic>
+
+        return render(request, self.template_name)
+
+class NewSignUpView(View):
+    template_name='new_signup.html'
+
+    def get(self, request):
+        # <view logic>
+
+        return render(request, self.template_name)
+
+
+class SignUpTeacherView(View):
+    template_name='new_signup_teacher.html'
+
+    def get(self, request):
+        # <view logic>
+
+        return render(request, self.template_name)
+
+class SignUpParentView(View):
+    template_name='new_signup_parent.html'
+
+    def get(self, request):
+        # <view logic>
+
+        return render(request, self.template_name)
+
 
 
 
