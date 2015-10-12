@@ -8,7 +8,15 @@ from mongoengine.errors import *
 import base64, bson
 BASE64_URLSAFE="-_"
 from school.settings import REDIS_CONN as cache
-from schoolapp.models import Group
+from schoolapp.models import Group, Status
+import cStringIO
+from PIL import Image
+import base64, uuid
+from boto.s3 import bucket
+from boto.s3.bucket import Key
+from s3_connection import S3Connection
+from school.settings import STATUS_UPLOAD_STORE
+from school.settings import STATUS_UPDATE_QUEUE
 
 def authenticate_user(func):
     """
@@ -19,12 +27,15 @@ def authenticate_user(func):
         username = self.request.data.get("username", None)
         password = self.request.data.get("password", None)
         try:
-            user = User.objects.get(username=username, password=password)
+            user = CustomUser.objects.get(username=username)
         except DoesNotExist:
             raise ValidationError("User does not exist")
         else:
-            request.user = user
-            return func(self, request)
+            if user.check_password(password):
+                request.user = user
+                return func(self, request)
+            else:
+                raise ValidationError("User's password is not correct")
     return inner
 
 class QueueRequests():
@@ -285,6 +296,67 @@ def get_attendance_data(user):
     groups = Group.objects.filter(owner=user)
     students = Student.objects.filter(group__in=groups)
     return {"students":students, "groups":groups}
+
+def upload_status_to_s3(user, x_session_id, body):
+    conn = S3Connection.get_instance()
+    bucket = conn.get_bucket(STATUS_UPLOAD_STORE)
+    k = Key(bucket)
+    k.key = x_session_id + '.' + str(user.id)
+    fp = cStringIO.StringIO(body)
+    k.set_contents_from_file(fp)
+
+def get_status_key_from(user, x_session_id):
+    encoded_upload_store = base64.b64encode(STATUS_UPLOAD_STORE, "-_")
+    filekey = base64.b64encode(x_session_id + '.' + str(user.id), "-_")
+    filekey = encoded_upload_store + filekey
+    return filekey
+
+def get_thumbnail(data):
+    img = Image.open(cStringIO.StringIO(data))
+    if(img.mode!= 'RGB'):
+        img = img.convert('RGB')
+    thumbnail = cStringIO.StringIO()
+    img.thumbnail((400, 400), Image.ANTIALIAS)
+    img.save(thumbnail, "JPEG", quality=50, progressive=True)
+    return base64.b64encode(thumbnail.getvalue())
+
+def get_status(status_id, only_image=False):
+    result={}
+    status=Status.objects.get(id=status_id)
+    if only_image:
+        s3_key = status.image_key
+        bucket_name = base64.b64decode(str(s3_key)[0:36],"-_")
+        encoded_s3_handle = str(s3_key)[36:]
+        padded_encoded_s3_handle = encoded_s3_handle + '=' * (-len(encoded_s3_handle) % 4)
+        s3_handle = base64.b64decode(padded_encoded_s3_handle, "-_")
+        conn = S3Connection.get_instance()
+        bucket = conn.get_bucket(bucket_name)
+        k = Key(bucket)
+        k.key = s3_handle
+        temp_file = cStringIO.StringIO()
+        k.get_contents_to_file(temp_file)
+        result['image'] = temp_file.getvalue()
+        temp_file.close()
+    result["id"]=str(status.id)
+    result["message"]=status.message
+    result["ts"]=status.ts
+    return result
+
+def get_to_users(user):
+    return []
+
+def post_status(user, data='', message='', to_users=[]):
+    thumbnail = get_thumbnail(data)
+    filekey=''
+    if data:
+        x_session_id = str(uuid.uuid4())
+        upload_status_to_s3(user, x_session_id, data)
+        filekey = get_status_key_from(user, x_session_id)
+        filekey = filekey.strip("=")
+    status=Status.objects.create(user=user, message=message, thumbnail=thumbnail, image_key=filekey)
+    if to_users:
+        QueueRequests.enqueue(STATUS_UPDATE_QUEUE, {"to_users":to_users, 'data':{"status_id": status.id, "image_key":status.image_key, "ts":status.ts, "tn":status.thumbnail, "message":status.message}})
+    return status
 
 
 

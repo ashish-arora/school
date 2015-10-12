@@ -23,7 +23,7 @@ from rest_framework.views import APIView
 from schoolapp.serializers import GroupSerializer, UserSerializer, OrganizationSerializer, StudentSerializer
 from schoolapp.serializers import AttendanceSerializer, UserLoginSerializer
 from schoolapp.utils.helpers import get_base64_decode, get_base64_encode
-from schoolapp.utils.helpers import create_parent, create_teacher, create_admin, create_student,delete_student
+from schoolapp.utils.helpers import create_parent, create_teacher, create_admin, create_student,delete_student, post_status, get_to_users, get_status
 from django.core.cache import cache
 import bson, base64, random, os
 BASE64_URLSAFE="-_"
@@ -32,6 +32,7 @@ from django.shortcuts import render_to_response
 from django.template.context import RequestContext
 from rest_framework.authentication import SessionAuthentication, BasicAuthentication
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.parsers import MultiPartParser
 
 
 logger = log.Logger.get_logger(__file__)
@@ -170,7 +171,7 @@ class AccountLogin(APIView):
             group_dict.update({"members":members})
             group_list.append(group_dict)
 
-        result_dict={"class":group_list}
+        result_dict={"class_data":group_list}
         return result_dict
 
     def show_teachers(self, user):
@@ -735,3 +736,41 @@ class DashboardTablesView(APIView):
     def get(self, request):
         return render_to_response("dashboard/tables.html", {}, context_instance=RequestContext(request))
 
+
+class StatusUpdateHandler(APIView):
+
+    parser_classes = (MultiPartParser,)
+
+    @authenticate_user
+    def post(self, request):
+        image_body=None
+        message = None
+        file = self.request.FILES.get('file')
+
+        if file:
+            image_body  = file.read()
+        message = self.request.POST.get('message')
+
+        if not image_body and not message:
+            raise ValidationError("Please specify at least message or attached file")
+        try:
+            to_users = get_to_users(request.user)
+            status = post_status(request.user, data=image_body, message=message, to_users=to_users)
+        except Exception, ex:
+            logger.error("Error occurred while posting status update: user_id: %s, error: %s" % (request.user.id, str(ex)))
+            raise APIException("Error occurred while doing status update")
+        else:
+            return JSONResponse({"stat": "ok", "status": str(status.id)})
+
+    def get(self, request):
+        status_id = self.request.GET.get("status_id")
+        only_image = False
+        if self.request.GET.get("only_image"):
+            only_image=True
+        try:
+            result = get_status(status_id, only_image)
+        except Exception, ex:
+            logger.error("Error occurred while getting status information: status_id: %s, error: %s" % (status_id, str(ex)))
+            raise APIException("Error occurred while getting status update")
+        else:
+            return JSONResponse({"stat":"ok", "data":result})
