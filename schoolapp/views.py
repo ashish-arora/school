@@ -174,7 +174,7 @@ class AccountLogin(APIView):
         return result_dict
 
     def show_teachers(self, user):
-        groups = Group.objects.filter(organization=user.organization)
+        groups = Group.objects.filter(organization__in=user.organization)
         teachers = []
         for group in groups:
             teachers.append(group.owner)
