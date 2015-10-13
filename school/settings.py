@@ -79,6 +79,7 @@ CACHES = {
     'default': {
         'BACKEND': 'redis_cache.RedisCache',
         'LOCATION': 'localhost:6379',
+        #'LOCATION': '54.254.167.4:6379',
         'OPTIONS': {
             'DB': 1,
             'PASSWORD': '',
@@ -87,6 +88,7 @@ CACHES = {
     },
 }
 
+#REDIS_CONN = redis.StrictRedis(host='54.254.167.4')
 REDIS_CONN = redis.StrictRedis()
 
 WSGI_APPLICATION = 'school.wsgi.application'
@@ -103,6 +105,7 @@ DATABASES = {
 }
 
 from mongoengine import connect
+#connect('schooldb', host='54.254.167.4')
 connect('schooldb', host='127.0.0.1')
 
 AUTH_USER_MODEL = 'mongo_auth.MongoUser'
