@@ -235,21 +235,20 @@ class AccountLogin(APIView):
         except Exception, ex:
             logger.error("Error while updating device info: %s, msisdn:%s" % (devices, msisdn))
             raise APIException("Error while saving data")
-
-        #get attendance data depending on the user type\
+        user_profile={"first_name":user.first_name,"last_name":user.last_name,"email":user.email,"type":user.type}
         try:
             type = user.type
             if type == PARENT:
                 #show attendance
                 result_dict = self.show_attendance(user)
-                return JSONResponse({"result":result_dict, "stat":"ok"}, status=status.HTTP_200_OK)
+                return JSONResponse({"user_profile":user_profile,"result":result_dict, "stat":"ok"}, status=status.HTTP_200_OK)
             elif type == TEACHER:
                 result_dict = self.show_groups(user)
-                return JSONResponse({"result":result_dict, "stat":"ok"}, status=status.HTTP_200_OK)
+                return JSONResponse({"user_profile":user_profile,"result":result_dict, "stat":"ok"}, status=status.HTTP_200_OK)
             elif type == ADMIN:
                 #sending list of teachers objects
                 result_dict = self.show_teachers(user)
-                return JSONResponse({"result":result_dict, "stat":"ok"}, status=status.HTTP_200_OK)
+                return JSONResponse({"user_profile":user_profile,"result":result_dict, "stat":"ok"}, status=status.HTTP_200_OK)
         except Exception, ex:
             logger.error("Error while getting info: %s" % str(ex))
             return JSONResponse({"stat":"fail", "errorMsg":"Error while getting information"})
@@ -357,7 +356,7 @@ class AccountPinValidation(APIView):
         return JSONResponse({"stat":"fail", "errorMsg":"Invalid PIN"})
 
 
-class Attendance(APIView):
+class AttendanceView(APIView):
 
     #@authenticate_user
     def post(self, request):
@@ -389,8 +388,9 @@ class Attendance(APIView):
               message: Bad Request
         """
         try:
+            import ipdb;ipdb.set_trace()
             attendance_data = request.data.get('attendance_data')
-            group_id = str(request.data.get('group_id'))
+            group_id = str(request.data.get('class_id'))
         except Exception, ex:
             logger.error("Error: %s" %(str(ex)))
             raise ValidationError("Required parameter was not there")
