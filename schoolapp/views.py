@@ -396,7 +396,8 @@ class Attendance(APIView):
             raise ValidationError("Required parameter was not there")
 
         try:
-            attendance_data = json.loads(attendance_data)
+            if isinstance(attendance_data,str):
+                attendance_data = json.loads(attendance_data)
         except Exception, ex:
             raise ParseError("Invalid json data: %s" % attendance_data)
 
@@ -410,13 +411,13 @@ class Attendance(APIView):
             if is_present not in VALID_ATTENDANCE_TYPES:
                 raise ValidationError("Invalid attendance type : %s " %(attendance_data))
             try:
-                student = CustomUser.objects.get(id=student_id)
+                student = Student.objects.get(id=student_id)
             except DoesNotExist, ex:
                 raise DoesNotExist("Student id does not exist: %s" % student_id)
 
             attendance_objs.append(Attendance(student=student, present=int(is_present)))
 
-            for parent_id in student.parent_ids:
+            for parent_id in student.parents:
                 QueueRequests.enqueue(NOTIFICATION_QUEUE, {'id': parent_id, 'name': student.name})
 
         try:
