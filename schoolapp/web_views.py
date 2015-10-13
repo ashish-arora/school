@@ -459,7 +459,6 @@ class AttendanceView(View):
         return render(request, self.template_name, data)
 
     def post(self, request):
-        import ipdb;ipdb.set_trace()
         errors=[]
         message=""
         group_id = request.POST.get('group_id')
