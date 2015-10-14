@@ -359,6 +359,15 @@ def post_status(user, data='', message='', to_users=[]):
     return status
 
 
+def can_add_students(organization):
+    if organization.product_type.free_students < Student.objects.filter(organization=organization).count():
+        return True
+    return False
+
+def get_students_can_be_added(organization):
+    return (organization.product_type.free_students - Student.objects.filter(organization=organization).count())
+
+
 
 
 

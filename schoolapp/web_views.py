@@ -11,17 +11,17 @@ from django.contrib.auth import login, logout
 from mongoengine.django.auth import User
 from mongoengine.django.mongo_auth import models
 from mongoengine.queryset import DoesNotExist
-from schoolapp.models import Organization, Student, Group, CustomUser, Attendance, AttendanceSummary
+from schoolapp.models import Organization, Student, Group, CustomUser, Attendance, AttendanceSummary, ProductType
 import bson, base64, random, os
 BASE64_URLSAFE="-_"
 from utils import log
 from forms import OrganizationForm
 import json, time
 from datetime import datetime, timedelta
-from models import TEACHER, PARENT
+from models import TEACHER, PARENT, PRODUCT_TYPES
 from utils.helpers import get_groups, create_teacher, update_teacher, get_teacher_owner_group,\
     get_students, create_student, update_student, create_parent, update_parent, get_group_list, get_teacher_view_data, \
-    delete_teacher, get_parent_view_data, delete_parent, get_attendance_data
+    delete_teacher, get_parent_view_data, delete_parent, get_attendance_data, can_add_students
 
 
 logger = log.Logger.get_logger(__file__)
@@ -72,14 +72,18 @@ class StudentView(View):
             else:
                 try:
                     org = organization[0]
-                    create_student(first_name=first_name, last_name=last_name, roll_no=roll_no, group=grp, organization=org)
+                    if can_add_students(org):
+                        create_student(first_name=first_name, last_name=last_name, roll_no=roll_no, group=grp, organization=org)
+                    else:
+                        message = "You cannot create/add any more students. Please upgrade your account to add/create more students"
                 except Exception, ex:
                     #request.POST.set("post_type", post_type)
                     #request.POST.post_type = post_type
                     logger.error("Error occurred while creating Student doc: %s, first_name: %s, last_name:%s, roll_no: %s, class_value:%s" % (str(ex), first_name, last_name, roll_no,groupid ))
                     errors.append("Error while saving data, please try again")
                 else:
-                    message = "Student profile has been successfully created"
+                    if not message:
+                        message = "Student profile has been successfully created"
         else:
             errors.append("Required parameter was not there")
             request.POST.post_type = post_type
@@ -369,6 +373,7 @@ class OrganizationView(View):
             city = request.POST.get('city')
             state = request.POST.get('state')
             address = request.POST.get('address')
+            product_type = request.POST.get('product_type')
         except Exception, ex:
             logger.error("Error: %s" %(str(ex)))
             errors.append("Required parameter was not there")
@@ -396,12 +401,23 @@ class OrganizationView(View):
                     organization.city = city
                     organization.country = country
                     organization.state = state
+                    if product_type and int(product_type) in PRODUCT_TYPES:
+                        product_type_obj=ProductType.objects.get(type=int(product_type))
+                        organization.product_type = product_type_obj
+                    else:
+                        if not organization.product_type:
+                            product_type_obj=ProductType.objects.get(type=0)
+                            organization.product_type = product_type_obj
                     organization.save()
                     message = "Organization has been successfully updated"
             else:
                 # to handle create request
                 try:
-                    organization = Organization.objects.create(name=name, country=country, city=city, state=state, address=address)
+                    if product_type and int(product_type) in PRODUCT_TYPES:
+                        product_type_obj = ProductType.objects.get(type=int(product_type))
+                    else:
+                        product_type_obj=ProductType.objects.get(type=0)
+                    organization = Organization.objects.create(name=name, country=country, city=city, state=state, address=address, product_type=product_type_obj)
                 except Exception, ex:
                     #request.POST.set("post_type", post_type)
                     request.POST.post_type = post_type
@@ -549,7 +565,6 @@ class SignUpParentView(View):
         # <view logic>
 
         return render(request, self.template_name)
-
 
 
 
