@@ -572,7 +572,7 @@ class EventsView(View):
     def get(self, request):
         # <view logic>
         status_list = get_events_list(request.user)
-        return render(request, self.template_name, {"status_list":status_list} )
+        return render(request, self.template_name, {"status_list":status_list})
 
     def post(self, request):
         image_body=None
@@ -594,7 +594,8 @@ class EventsView(View):
             errors.append("Error occurred while doing status update")
         else:
             message="Status has been posted successfully"
-        return render(request, self.template_name, {"errors":errors, "message":message})
+        status_list = get_events_list(request.user)
+        return render(request, self.template_name, {"errors":errors, "message":message, "status_list":status_list})
 
 
 
