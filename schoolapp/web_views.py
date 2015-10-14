@@ -21,7 +21,7 @@ from datetime import datetime, timedelta
 from models import TEACHER, PARENT, PRODUCT_TYPES
 from utils.helpers import get_groups, create_teacher, update_teacher, get_teacher_owner_group,\
     get_students, create_student, update_student, create_parent, update_parent, get_group_list, get_teacher_view_data, \
-    delete_teacher, get_parent_view_data, delete_parent, get_attendance_data, can_add_students
+    delete_teacher, get_parent_view_data, delete_parent, get_attendance_data, can_add_students, get_events_list, post_status, get_to_users
 
 
 logger = log.Logger.get_logger(__file__)
@@ -565,6 +565,36 @@ class SignUpParentView(View):
         # <view logic>
 
         return render(request, self.template_name)
+
+class EventsView(View):
+    template_name='events.html'
+
+    def get(self, request):
+        # <view logic>
+        status_list = get_events_list(request.user)
+        return render(request, self.template_name, {"status_list":status_list} )
+
+    def post(self, request):
+        image_body=None
+        message = None
+        errors=[]
+        file = self.request.FILES.get('file')
+
+        if file:
+            image_body  = file.read()
+        status = self.request.POST.get('message')
+
+        if not image_body and not status:
+            errors.append("Please specify either message or attached file")
+        try:
+            to_users = get_to_users(request.user)
+            status_obj = post_status(request.user, data=image_body, message=status, to_users=to_users)
+        except Exception, ex:
+            logger.error("Error occurred while posting status update: user_id: %s, error: %s" % (request.user.id, str(ex)))
+            errors.append("Error occurred while doing status update")
+        else:
+            message="Status has been posted successfully"
+        return render(request, self.template_name, {"errors":errors, "message":message})
 
 
 

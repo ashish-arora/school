@@ -10,13 +10,15 @@ BASE64_URLSAFE="-_"
 from school.settings import REDIS_CONN as cache
 from schoolapp.models import Group, Status
 import cStringIO
-#from PIL import Image
+from PIL import Image
 import base64, uuid
 from boto.s3 import bucket
 from boto.s3.bucket import Key
 from s3_connection import S3Connection
 from school.settings import STATUS_UPLOAD_STORE
 from school.settings import STATUS_UPDATE_QUEUE
+import os
+from school.settings import MEDIA_ROOT
 
 def authenticate_user(func):
     """
@@ -311,15 +313,18 @@ def get_status_key_from(user, x_session_id):
     filekey = encoded_upload_store + filekey
     return filekey
 
-def get_thumbnail(data):
-    """img = Image.open(cStringIO.StringIO(data))
+def get_thumbnail(user, data, filekey):
+    img = Image.open(cStringIO.StringIO(data))
     if(img.mode!= 'RGB'):
         img = img.convert('RGB')
+    if not os.path.isdir(os.path.join(MEDIA_ROOT, str(user.id))):
+        os.makedirs(os.path.join(MEDIA_ROOT, str(user.id)))
+    image_path = os.path.join(MEDIA_ROOT, str(user.id), filekey)
+    img.save("%s.jpeg" % (image_path), "JPEG")
     thumbnail = cStringIO.StringIO()
     img.thumbnail((400, 400), Image.ANTIALIAS)
     img.save(thumbnail, "JPEG", quality=50, progressive=True)
-    return base64.b64encode(thumbnail.getvalue())"""
-    return None
+    return base64.b64encode(thumbnail.getvalue())
 
 def get_status(status_id, only_image=False):
     result={}
@@ -347,13 +352,15 @@ def get_to_users(user):
     return []
 
 def post_status(user, data='', message='', to_users=[]):
-    thumbnail = get_thumbnail(data)
     filekey=''
+    thumbnail=''
     if data:
         x_session_id = str(uuid.uuid4())
         upload_status_to_s3(user, x_session_id, data)
         filekey = get_status_key_from(user, x_session_id)
         filekey = filekey.strip("=")
+        thumbnail = get_thumbnail(user, data, filekey)
+
     status=Status.objects.create(user=user, message=message, thumbnail=thumbnail, image_key=filekey)
     if to_users:
         QueueRequests.enqueue(STATUS_UPDATE_QUEUE, {"to_users":to_users, 'data':{"status_id": status.id, "image_key":status.image_key, "ts":status.ts, "tn":status.thumbnail, "message":status.message}})
@@ -367,6 +374,11 @@ def can_add_students(organization):
 
 def get_students_can_be_added(organization):
     return (organization.product_type.free_students - Student.objects.filter(organization=organization).count())
+
+
+def get_events_list(user):
+    status_list = Status.objects.filter(user=user)
+    return status_list
 
 
 

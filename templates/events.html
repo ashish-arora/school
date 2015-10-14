@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+
+{% block css%}
+<link href="//netdna.bootstrapcdn.com/bootstrap/3.0.0-rc1/css/bootstrap.min.css" rel="stylesheet">
+<link href="/static/css/events.css" rel="stylesheet">
+{% endblock css%}
+
+{% block javascript%}
+    <script>
+        $(window).load(function(){
+
+            $('.status').click(function() { $('.arrow').css("left", 0);});
+            $('.photos').click(function() { $('.arrow').css("left", 146);});
+
+            {% if request.POST %}
+                console.log("inside post");
+                $("#inputname").val('{{request.POST.name}}');
+                {% if request.POST.post_type == "post" %}
+                    $("#modal_form").attr('action', '/group/');
+                {% else %}
+                    $("#modal_form").attr('action', '/group/' + '{{group.id}}' + '/');
+                {% endif %}
+            {% endif %}
+
+            {% if errors %}
+                $('#myModal').modal('show');
+            {% endif %}
+
+            function set_selected_owner_option(list_data){
+                for (i = 0; i < list_data.length; i++) {
+                     $('#inputOwners option[value=' + list_data[i] + ']').attr('selected', true);
+                };
+            }
+
+            function set_selected_member_option(list_data){
+                for (i = 0; i < list_data.length; i++) {
+                     $('#inputMembers option[value=' + list_data[i] + ']').attr('selected', true);
+                };
+            }
+
+            $(".edit_btn").click(function() {
+                var group_id = $(this).attr("value");
+                console.log("Group id is " + group_id);
+                $("#modal_form").attr('action', '/group/' + group_id + '/');
+                $("#inputname").val($("#" + group_id).find('td').eq(0).html());
+                $("#errors_div").val('');
+                $("#myModalLabel").text("Edit Class");
+                set_selected_owner_option(group_owner_map[group_id]);
+                set_selected_member_option(group_member_map[group_id]);
+                $("#inputOrganization").val(group_organization_map[group_id]);
+                $('#myModal').modal('show');
+            });
+
+            $(".remove_btn").click(function(){
+                var group_id = $(this).attr("value");
+                console.log("Group id is " + group_id);
+                $.post("/group/delete/",{"group_id": group_id, "csrfmiddlewaretoken": '{{csrf_token}}'}, function(data, status){
+                    alert("Successfully removed the group");
+                    $('#' + group_id).remove();
+                })
+
+                .fail(function(){
+                   alert("Error occurred while deleting group");
+                });
+
+            });
+
+            $("#add_group").click(function(){
+                console.log("inside add");
+                $("#modal_form").attr('action', '/group/');
+                $("#inputname").val('');
+                $("option:selected").removeAttr("selected");
+                $('select').val('');
+                $("#errors_div").html('');
+                $("#myModalLabel").text("Add Class");
+                $('#myModal').modal('show');
+            });
+
+            function get_html_group_data(list_data){
+                var htm = "";
+                for (i = 0; i < list_data.length; i++) {
+                    htm += "<a class='btn btn-info btn-sm org-show' role='button' style='margin:3px 3px 3px 3px;'>" + list_data[i] + "</a>";
+                };
+                return htm;
+            }
+
+            $(".member-show").click(function(){
+                console.log("inside member show");
+                var member_id = $(this).attr("value");
+                console.log(member_id);
+                console.log(member_data[member_id]);
+                console.log(member_data[member_id]['name']);
+                $("#inputmemberfirstname").val(member_data[member_id]['first_name']);
+                $("#inputmemberlastname").val(member_data[member_id]['last_name']);
+                $("#inputcity").val(member_data[member_id]['city']);
+                $("#inputrollno").val(member_data[member_id]['rollno']);
+                $("#modal_parent_data").html(get_html_group_data(member_data[member_id]['parents']));
+                $("#modal_organization_data").html(get_html_group_data(member_data[member_id]['organization']));
+                $('#myMemberModal').modal('show');
+            });
+
+            $(".teacher-show").click(function(){
+                console.log(" inside teacher show");
+                var teacher_id = $(this).attr("value");
+                console.log(teacher_data[teacher_id]);
+                $("#teacher_name").val(teacher_data[teacher_id]['name']);
+                $("#teacher_email").val(teacher_data[teacher_id]['email']);
+                $("#teacher_msisdn").val(teacher_data[teacher_id]['msisdn']);
+                $("#organization_data").html(get_html_group_data(teacher_data[teacher_id]['organization']));
+                $('#myTeacherModal').modal('show');
+            });
+
+            var member_data = {};
+            var teacher_data = {};
+            var group_owner_map={};
+            var group_member_map={};
+            var group_organization_map={};
+            {% for group in groups %}
+                group_organization_map['{{group.id}}']='{{group.organization.id}}';
+                group_member_map['{{group.id}}']=[];
+                {% for member in group.members %}
+                    group_member_map['{{group.id}}'].push('{{member.id}}');
+                    member_data['{{member.id}}'] = {};
+                    member_data['{{member.id}}']['first_name'] = '{{member.first_name}}';
+                    member_data['{{member.id}}']['last_name'] = '{{member.last_name}}';
+                    member_data['{{member.id}}']['roll_no'] = '{{member.roll_no}}';
+                    member_data['{{member.id}}']['parents']=[]
+                    {% for parent in member.parents %}
+                        member_data['{{member.id}}']['parents'].push('{{parent.first_name}}');
+                    {% endfor %}
+                    member_data['{{member.id}}']['organization'] = '{{member.organization.name}}';
+                {% endfor %}
+                group_owner_map['{{group.id}}']=[];
+                {% for teacher in group.owner %}
+                    group_owner_map['{{group.id}}'].push('{{teacher.id}}');
+                    teacher_data['{{teacher.id}}'] = {};
+                    teacher_data['{{teacher.id}}']['name'] = '{{teacher.first_name}}';
+                    teacher_data['{{teacher.id}}']['email']='{{teacher.email}}';
+                    teacher_data['{{teacher.id}}']['msisdn']='{{teacher.msisdn}}';
+                    teacher_data['{{teacher.id}}']['organization'] =[];
+                    {% for organization in teacher.organization %}
+                        teacher_data['{{teacher.id}}']['organization'].push('{{organization.name}}');
+                    {% endfor %}
+                {% endfor %}
+            {% endfor %}
+            console.log("member data", member_data);
+            console.log("teacher data", teacher_data);
+
+        });
+    </script>
+    <script src="//netdna.bootstrapcdn.com/bootstrap/3.0.0-rc1/js/bootstrap.min.js"></script>
+    <script src="/static/js/file_upload.js"></script>
+
+{% endblock javascript%}
+
+{% block content %}
+ <div id="page-wrapper">
+            <div class="container-fluid">
+
+                <!-- Page Heading -->
+                <div class="row">
+                    <div class="col-lg-12">
+                        <h1 class="page-header">
+                            Events
+                        </h1>
+                        <ol class="breadcrumb">
+                            <li>
+                                <i class="fa fa-dashboard"></i>  <a href="/dashboard/">Dashboard</a>
+                            </li>
+                            <li class="active">
+                                <i class="/events/"></i> Events
+                            </li>
+                        </ol>
+                    </div>
+                </div>
+                {% if message %}
+                    <div class="alert alert-success">
+                     {{message}}
+                    </div>
+                {% endif %}
+                <div class="row">
+                    <div class="col-sm-8">
+                        <div class="panel panel-primary">
+                            <div class="panel-heading">
+                                <h3 class="panel-title">Post an Update</h3>
+                            </div>
+                            <div class="panel-body">
+                                <form class="form-horizontal" action="/events/" method="post" enctype="multipart/form-data">
+                                    {% csrf_token %}
+                                  <div class="form-group">
+                                    <div class="col-sm-10">
+                                      <textarea class="form-control" name="message" placeholder="What's on your mind" rows="3"></textarea>
+                                    </div>
+                                  </div>
+                                  <div class="row">
+                                      <div class="col-sm-12">
+                                          <div class="btn-group">
+
+                                          <div class="fileupload fileupload-new" data-provides="fileupload" style="float:left;">
+                                            <span class="btn btn-success btn-file" style="border-top-right-radius: 0px;border-bottom-right-radius: 0px;"><span class="fileupload-new">Add Photo</span>
+                                            <span class="fileupload-exists">Change</span>         <input type="file" name="file"/></span>
+                                            <span class="fileupload-preview"></span>
+                                            <a href="#" class="close fileupload-exists" data-dismiss="fileupload" style="float: none">×</a>
+                                          </div>
+                                          <button type="submit" class="btn btn-primary" style="float:right;">Post</button>
+                                          </div>
+                                      </div>
+                                  </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% for status in status_list %}
+                <div class="row">
+                    <div class="col-sm-8">
+                        <div class="panel panel-default">
+                            <div class="row">
+                                <div style="display:inline-block;padding-left:10px;">
+                                        <img src="/var/media/{{request.user.id}}/{{status.image_key}}.jpeg"
+                                        alt="Generic placeholder thumbnail" class="img-circle" style="height:50px; width:50px;">
+                                </div>
+                                    <h4 style="display:inline-block;">{{status.user.first_name}}</h4>
+                            </div>
+                            <div class="panel-body">
+                                    <div class="col-sm-12">
+                                    {% if status.image_key %}
+                                        <img src="/var/media/{{request.user.id}}/{{status.image_key}}.jpeg" alt="HTML tutorial" style="height:inherit; width:inherit;">
+                                    {% endif %}
+                                    <p style="text-align:left; margin-top:10px;">{{status.message}}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+
+            <!--{% for status in status_list %}
+                <div class="row">
+                    <div class="col-sm-offset-1 col-sm-6">
+                        {% if status.image_key %}
+                            <img src="/var/media/{{request.user.id}}/{{status.image_key}}.jpeg" alt="HTML tutorial">
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="row">
+                    <p>{{status.message}}</p>
+                </div>
+            {% endfor %}-->
+
+
+            </div>
+            <!-- /.container-fluid -->
+
+        </div>
+        <!-- /#page-wrapper -->
+{% endblock content %}

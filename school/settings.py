@@ -191,3 +191,8 @@ S3_CONTENT_BUCKET = 'S3_CONTENT_BUCKET'
 #FILE_EXPIRY_DELTA = 2 #in hrs
 STATUS_UPLOAD_STORE = amazon_s3_config['staging']['status_upload_store']
 #IMAGE_UPLOAD_STORE = amazon_s3_config['staging']['status_upload_store']
+
+MEDIA_ROOT='/var/media/'
+
+MEDIA_URL='/var/media/'
+
