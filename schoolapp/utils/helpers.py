@@ -10,7 +10,7 @@ BASE64_URLSAFE="-_"
 from school.settings import REDIS_CONN as cache
 from schoolapp.models import Group, Status
 import cStringIO
-from PIL import Image
+#from PIL import Image
 import base64, uuid
 from boto.s3 import bucket
 from boto.s3.bucket import Key
@@ -312,13 +312,14 @@ def get_status_key_from(user, x_session_id):
     return filekey
 
 def get_thumbnail(data):
-    img = Image.open(cStringIO.StringIO(data))
+    """img = Image.open(cStringIO.StringIO(data))
     if(img.mode!= 'RGB'):
         img = img.convert('RGB')
     thumbnail = cStringIO.StringIO()
     img.thumbnail((400, 400), Image.ANTIALIAS)
     img.save(thumbnail, "JPEG", quality=50, progressive=True)
-    return base64.b64encode(thumbnail.getvalue())
+    return base64.b64encode(thumbnail.getvalue())"""
+    return None
 
 def get_status(status_id, only_image=False):
     result={}
