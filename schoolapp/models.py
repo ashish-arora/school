@@ -1,6 +1,6 @@
 from mongoengine import *
 from mongoengine.django.auth import User
-import time
+import time,datetime
 
 ADMIN = 1
 TEACHER = 2
@@ -59,7 +59,8 @@ class Organization(DynamicDocument):
     state = StringField(max_length=20)
     country = StringField()
     address = StringField(max_length=50)
-
+    product_plan = ReferenceField('ProductPlan')
+    plan_creation_date = DateTimeField(default=datetime.datetime.now())
 
 class Student(Document):
     first_name=StringField(max_length=20)
@@ -104,3 +105,8 @@ class Status(Document):
     ts=IntField(default=int(time.time()))
     thumbnail=StringField()
     image_key=StringField()
+
+class ProductPlan(Document):
+    name = StringField(required=True)
+    duration_days = IntField(required=True) #duration_days = -1 represents life time plan
+    features = DictField()                  #free_students = -1 represents unlimited addition of students

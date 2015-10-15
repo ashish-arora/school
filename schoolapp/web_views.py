@@ -11,18 +11,15 @@ from django.contrib.auth import login, logout
 from mongoengine.django.auth import User
 from mongoengine.django.mongo_auth import models
 from mongoengine.queryset import DoesNotExist
-from schoolapp.models import Organization, Student, Group, CustomUser, Attendance, AttendanceSummary
+from schoolapp.models import Organization, Student, Group, CustomUser, Attendance, AttendanceSummary,ProductPlan
 import bson, base64, random, os
 BASE64_URLSAFE="-_"
-from utils import log
+from schoolapp.utils import log
 from forms import OrganizationForm
 import json, time
 from datetime import datetime, timedelta
 from models import TEACHER, PARENT
-from utils.helpers import get_groups, create_teacher, update_teacher, get_teacher_owner_group,\
-    get_students, create_student, update_student, create_parent, update_parent, get_group_list, get_teacher_view_data, \
-    delete_teacher, get_parent_view_data, delete_parent, get_attendance_data, get_events_list, post_status, get_to_users
-
+from schoolapp.utils.helpers import *
 
 
 logger = log.Logger.get_logger(__file__)
@@ -71,16 +68,24 @@ class StudentView(View):
                     update_student(student,first_name=first_name,last_name=last_name,roll_no=roll_no,group=grp)
                     message = "Student information has been successfully updated"
             else:
-                try:
-                    org = organization[0]
-                    create_student(first_name=first_name, last_name=last_name, roll_no=roll_no, group=grp, organization=org)
-                except Exception, ex:
-                    #request.POST.set("post_type", post_type)
-                    #request.POST.post_type = post_type
-                    logger.error("Error occurred while creating Student doc: %s, first_name: %s, last_name:%s, roll_no: %s, class_value:%s" % (str(ex), first_name, last_name, roll_no,groupid ))
-                    errors.append("Error while saving data, please try again")
+                org = organization[0]
+                if is_plan_within_expiry(org):
+                    if can_add_student(org):
+                        try:
+                            create_student(first_name=first_name, last_name=last_name, roll_no=roll_no, group=grp, organization=org)
+                        except Exception, ex:
+                            #request.POST.set("post_type", post_type)
+                            #request.POST.post_type = post_type
+                            logger.error("Error occurred while creating Student doc: %s, first_name: %s, last_name:%s, roll_no: %s, class_value:%s" % (str(ex), first_name, last_name, roll_no,groupid ))
+                            errors.append("Error while saving data, please try again")
+                        else:
+                            message = "Student profile has been successfully created"
+                    else:
+                        logger.error("free_students limit reached: %s"%(str(org.name)))
+                        errors.append("Cannot add more students. Upgrade the plan for your Organization: %s"%(str(org.name)))
                 else:
-                    message = "Student profile has been successfully created"
+                    logger.error("Plan has expired for Organization: %s, on the date: %s"%(str(org.name)),str(get_plan_expiry(org).date()) )
+                    errors.append("Plan has expired for your Organization: %s, on the date: %s"%(str(org.name)),str(get_plan_expiry(org).date()))
         else:
             errors.append("Required parameter was not there")
             request.POST.post_type = post_type
