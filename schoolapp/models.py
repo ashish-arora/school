@@ -18,10 +18,6 @@ VALID_COUNTRY = ['+91']
 
 VALID_ATTENDANCE_TYPES = [PRESENT, ABSENT]
 
-PRODUCT_TYPES = (0, 1)
-
-PRODUCT_TYPE_NAMES = ('BASIC', 'PREMIUM')
-
 class CustomUser(User):
     msisdn = StringField(max_length=15, unique_with='type', required=True)
     devices = DictField(required=False)
@@ -63,7 +59,6 @@ class Organization(Document):
     state = StringField(max_length=20)
     country = StringField()
     address = StringField(max_length=50)
-    product_type=ReferenceField('ProductType')
 
 
 class Student(Document):
@@ -109,16 +104,3 @@ class Status(Document):
     ts=IntField(default=int(time.time()))
     thumbnail=StringField()
     image_key=StringField()
-
-
-class ProductType(Document):
-    name= StringField(required=True, choices=PRODUCT_TYPE_NAMES)
-    type= IntField(required=True, choices=PRODUCT_TYPES)
-    free_students=IntField(required=True)
-    features=ListField()
-
-class Transactions(Document):
-    organization = ReferenceField(Organization)
-    payment = IntField(required=True)
-    ts=IntField(default=time.time())
-

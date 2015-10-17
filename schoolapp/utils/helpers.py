@@ -366,21 +366,9 @@ def post_status(user, data='', message='', to_users=[]):
         QueueRequests.enqueue(STATUS_UPDATE_QUEUE, {"to_users":to_users, 'data':{"status_id": status.id, "image_key":status.image_key, "ts":status.ts, "tn":status.thumbnail, "message":status.message}})
     return status
 
-
-def can_add_students(organization):
-    if organization.product_type.free_students < Student.objects.filter(organization=organization).count():
-        return True
-    return False
-
-def get_students_can_be_added(organization):
-    return (organization.product_type.free_students - Student.objects.filter(organization=organization).count())
-
-
 def get_events_list(user):
     status_list = Status.objects.filter(user=user)
     return status_list
-
-
 
 
 
