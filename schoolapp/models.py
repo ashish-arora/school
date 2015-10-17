@@ -53,7 +53,7 @@ class CustomUser(User):
     }
 """
 
-class Organization(Document):
+class Organization(DynamicDocument):
     name = StringField(max_length=20)
     city = StringField(max_length=20)
     state = StringField(max_length=20)
