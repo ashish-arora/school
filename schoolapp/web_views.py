@@ -19,9 +19,12 @@ from forms import OrganizationForm
 import json, time
 from datetime import datetime, timedelta
 from models import TEACHER, PARENT
+import random, md5
+import traceback
+from school.settings import REDIS_CONN as cache
 from utils.helpers import get_groups, create_teacher, update_teacher, get_teacher_owner_group,\
     get_students, create_student, update_student, create_parent, update_parent, get_group_list, get_teacher_view_data, \
-    delete_teacher, get_parent_view_data, delete_parent, get_attendance_data
+    delete_teacher, get_parent_view_data, delete_parent, get_attendance_data,send_mail
 
 
 logger = log.Logger.get_logger(__file__)
@@ -439,6 +442,64 @@ def login_view(request):
             return HttpResponse('unknown error')
     app_path=request.get_full_path()
     return render(request, "login.html", {"app_path":app_path})
+
+@csrf_exempt
+def forgot_password_view(request):
+    domain = "54.148.141.180:8000"
+    if request.method == 'POST':
+        try:
+            username = request.POST.get('username')
+            user_object = CustomUser.objects.filter(username=username)
+            if not user_object:
+                return HttpResponse('user does not exist')
+            user = user_object[0]
+            username = user.username
+            ##email = user.email TODO
+            email = "ankit.aggarwal170791@gmail.com"
+            try:
+                salt = md5.new(str(random.random())).hexdigest()
+                activation_key = md5.new(salt + domain + username).hexdigest()
+                cache.set(activation_key, username, 24*3600)
+                mail_subject = "Reset Password for the user:%s" % username
+                mail_body = "This is your Activation link visit the link to set new password: http://%s" % domain + "/reset-password/" + "%s" % activation_key
+                from_addr = "ankit.aggarwal170791@gmail.com"
+                receipants = [email]
+                send_mail(receipants, from_addr, mail_subject, mail_body) 
+                return HttpResponse('Please check your inbox')
+            except:
+                return HttpResponse("Could not send mail, server is not working or not configured, Sorry for inconvinience  \n ERROR : %s"%( traceback.format_exc()))
+        except:
+            pass
+    else:
+        return render(request, "forgot_password.html")
+
+@csrf_exempt
+def reset_password_view(request, key):
+    if request.method == 'POST':
+        try:
+            password1 = request.POST.get('password1', None)
+            password2 = request.POST.get('password2', None)
+            if password1 != password2:
+                return render(request, "reset_password.html", {'message': 'password does not match'})
+            username = cache.get(key)
+            if username:
+                user_object = CustomUser.objects.filter(username=username)
+            if not user_object:
+                return HttpResponse("Something went wrong")
+            user = user_object[0]
+            user.set_password(password1)
+            user.save()
+            cache.delete(key)
+            app_path=request.get_full_path()
+            return redirect('/login')
+        except:
+            return HttpResponse("Something went wrong")
+    else:
+        username = cache.get(key)
+        if username:
+            return render(request, "reset_password.html")
+        else:
+            return HttpResponse("Your reset password link has expired. Please try again.")
 
 def logout_view(request):
     logout(request)

@@ -39,6 +39,8 @@ urlpatterns = patterns('',
     url(r'^api/v1/status', views.StatusUpdateHandler.as_view()),
     url(r'^login/', web_views.login_view),
     url(r'^logout/', web_views.logout_view),
+    url(r'^forgot-password/', web_views.forgot_password_view),
+    url(r'^reset-password/(.+)/', web_views.reset_password_view),
     url(r'^signup/', web_views.SignUpView.as_view()),
     url(r'^index/', views.IndexView.as_view()),
 
