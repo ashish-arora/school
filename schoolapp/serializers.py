@@ -10,11 +10,10 @@ class GroupSerializer(DocumentSerializer):
         fields = ('name', 'organization', 'members', 'owner')
 
 class OrganizationSerializer(DocumentSerializer):
-    user = serializers.StringRelatedField(many=True)
 
     class Meta:
         model=Organization
-        fields = ('name', 'city', 'state', 'country', 'user', 'address')
+        fields = ('name', 'city', 'state', 'country', 'address')
 
 
 class UserSerializer(DocumentSerializer):

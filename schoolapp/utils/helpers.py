@@ -5,7 +5,8 @@ logging = log.Logger.get_logger(__file__)
 from schoolapp.models import CustomUser, Student
 from schoolapp.models import TEACHER, PARENT, ADMIN
 from mongoengine.errors import *
-import base64, bson
+import base64, bson, datetime
+from datetime import timedelta
 BASE64_URLSAFE="-_"
 from school.settings import REDIS_CONN as cache
 from schoolapp.models import Group, Status
@@ -371,18 +372,41 @@ def post_status(user, data='', message='', to_users=[], profile_pic=False):
     return status
 
 
-def can_add_students(organization):
-    if organization.product_type.free_students < Student.objects.filter(organization=organization).count():
-        return True
-    return False
-
-def get_students_can_be_added(organization):
-    return (organization.product_type.free_students - Student.objects.filter(organization=organization).count())
-
-
 def get_events_list(user):
     status_list = Status.objects.filter(user=user)
     return status_list
+
+def is_plan_within_expiry(organization):
+    plan = organization.product_plan
+    created_on = organization.plan_creation_date
+    duration = plan.duration_days
+    #duration_days = -1 represents life time plan
+    if duration==-1:
+        return True
+    today = datetime.datetime.now()
+    delta = today-created_on
+    if delta < duration:
+        return True
+    return False
+
+def get_plan_expiry(organization):
+    plan = organization.product_plan
+    created_on = organization.plan_creation_date
+    duration = plan.duration_days
+    expiry_date = created_on+timedelta(days = duration)
+    return expiry_date
+
+def can_take_attendance(organization):
+    attendance_val = organization.product_plan.features.get("attendance",0)
+    if(attendance_val==1):
+        return True
+    return False
+
+def can_send_event_update(organization):
+    event_update_val = organization.product_plan.features.get("event_update",0)
+    if(event_update_val==1):
+        return True
+    return False
 
 def valid_msisdn(msisdn):
     pass
@@ -391,7 +415,14 @@ def valid_msisdn(msisdn):
 def valid_email(email):
     return True
 
-
+def can_add_student(organization):
+    permissible_count = organization.product_plan.features.get("free_students",50)
+    #free_students = -1 represents unlimited addition of students
+    if permissible_count==-1:
+        return True
+    if permissible_count > Student.objects.filter(organization=organization).count():
+        return True
+    return False
 
 
 

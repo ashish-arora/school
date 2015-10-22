@@ -23,7 +23,8 @@ from rest_framework.views import APIView
 from schoolapp.serializers import GroupSerializer, UserSerializer, OrganizationSerializer, StudentSerializer
 from schoolapp.serializers import AttendanceSerializer, UserLoginSerializer
 from schoolapp.utils.helpers import get_base64_decode, get_base64_encode
-from schoolapp.utils.helpers import create_parent, create_teacher, create_admin, create_student,delete_student, post_status, get_to_users, get_status
+from schoolapp.utils.helpers import create_parent, create_teacher, create_admin, create_student,delete_student, \
+    post_status, get_to_users, get_status,is_plan_within_expiry,can_take_attendance
 from django.core.cache import cache
 import bson, base64, random, os
 BASE64_URLSAFE="-_"
@@ -228,7 +229,6 @@ class AccountLogin(APIView):
             user = CustomUser.objects.get(msisdn=msisdn, token=token)
         except Exception, ex:
             raise AuthenticationFailed("Invalid credentials,msisdn:%s, token:%s, type:%s" %(msisdn, token))
-
         try:
             user.devices = devices
             user.save()
@@ -388,7 +388,6 @@ class AttendanceView(APIView):
               message: Bad Request
         """
         try:
-            import ipdb;ipdb.set_trace()
             attendance_data = request.data.get('attendance_data')
             group_id = str(request.data.get('class_id'))
         except Exception, ex:
@@ -416,7 +415,6 @@ class AttendanceView(APIView):
                 raise DoesNotExist("Student id does not exist: %s" % student_id)
 
             attendance_objs.append(Attendance(student=student, present=int(is_present)))
-
             for parent_id in student.parents:
                 QueueRequests.enqueue(NOTIFICATION_QUEUE, {'id': parent_id, 'name': student.name})
 
@@ -425,6 +423,8 @@ class AttendanceView(APIView):
         except Exception, ex:
             logger.error("Error occurred while saving the attendance doc: %s, data: %s, group_id:%s" % (str(ex), attendance_data, group_id))
             raise APIException("Error while saving data")
+
+
         return JSONResponse({"stat": "ok"})
 
 
