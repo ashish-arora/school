@@ -351,7 +351,7 @@ def get_status(status_id, only_image=False):
 def get_to_users(user):
     return []
 
-def post_status(user, data='', message='', to_users=[]):
+def post_status(user, data='', message='', to_users=[], profile_pic=False):
     filekey=''
     thumbnail=''
     if data:
@@ -362,6 +362,10 @@ def post_status(user, data='', message='', to_users=[]):
         thumbnail = get_thumbnail(user, data, filekey)
 
     status=Status.objects.create(user=user, message=message, thumbnail=thumbnail, image_key=filekey)
+    if profile_pic:
+        user.thumbnail = thumbnail
+        user.image_key = filekey
+        user.save()
     if to_users:
         QueueRequests.enqueue(STATUS_UPDATE_QUEUE, {"to_users":to_users, 'data':{"status_id": status.id, "image_key":status.image_key, "ts":status.ts, "tn":status.thumbnail, "message":status.message}})
     return status
@@ -379,6 +383,14 @@ def get_students_can_be_added(organization):
 def get_events_list(user):
     status_list = Status.objects.filter(user=user)
     return status_list
+
+def valid_msisdn(msisdn):
+    pass
+    return True
+
+def valid_email(email):
+    return True
+
 
 
 

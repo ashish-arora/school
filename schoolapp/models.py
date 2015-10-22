@@ -29,6 +29,8 @@ class CustomUser(User):
     token = StringField(max_length=20)
     type= IntField(required=True, choices=USER_TYPE)
     organization = ListField(ReferenceField('Organization'))
+    thumbnail=StringField()
+    image_key=StringField()
     md = DictField(default={})
     ts = IntField(default=int(time.time()))
 

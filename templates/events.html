@@ -3,6 +3,7 @@
 {% block css%}
 <link href="//netdna.bootstrapcdn.com/bootstrap/3.0.0-rc1/css/bootstrap.min.css" rel="stylesheet">
 <link href="/static/css/events.css" rel="stylesheet">
+<link href="/static/css/app.min.css" rel="stylesheet">
 {% endblock css%}
 
 {% block javascript%}
@@ -181,9 +182,9 @@
                 <div class="row">
                     <div class="col-sm-8">
                         <div class="panel panel-primary">
-                            <div class="panel-heading">
+                            <!--<div class="panel-heading">
                                 <h3 class="panel-title">Post an Update</h3>
-                            </div>
+                            </div>-->
                             <div class="panel-body">
                                 <form class="form-horizontal" action="/events/" method="post" enctype="multipart/form-data">
                                     {% csrf_token %}

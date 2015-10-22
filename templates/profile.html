@@ -1,0 +1,262 @@
+{% extends "base.html" %}
+
+{% block css%}
+<link href="//netdna.bootstrapcdn.com/bootstrap/3.0.0-rc1/css/bootstrap.min.css" rel="stylesheet">
+<link href="/static/css/events.css" rel="stylesheet">
+<link href="/static/css/app.min.css" rel="stylesheet">
+{% endblock css%}
+
+{% block javascript%}
+    <script>
+        $(window).load(function(){
+
+            $('.status').click(function() { $('.arrow').css("left", 0);});
+            $('.photos').click(function() { $('.arrow').css("left", 146);});
+
+            {% if request.POST %}
+                console.log("inside post");
+                $("#first_name").val('{{request.POST.first_name}}');
+                $("#last_name").val('{{request.POST.last_name}}');
+                $("#email").val('{{request.POST.email}}');
+                $("#msisdn").val('{{request.POST.msisdn}}');
+            {% endif %}
+
+            {% if errors %}
+                $('#myModal').modal('show');
+            {% endif %}
+
+            function set_selected_owner_option(list_data){
+                for (i = 0; i < list_data.length; i++) {
+                     $('#inputOwners option[value=' + list_data[i] + ']').attr('selected', true);
+                };
+            }
+
+            function set_selected_member_option(list_data){
+                for (i = 0; i < list_data.length; i++) {
+                     $('#inputMembers option[value=' + list_data[i] + ']').attr('selected', true);
+                };
+            }
+
+            $(".edit_btn").click(function() {
+                console.log($("#tab_first_name").text());
+                $("#first_name").val($("#tab_first_name").text());
+                $("#last_name").val($("#tab_last_name").text());
+                $("#email").val($("#tab_email").text());
+                $("#msisdn").val($("#tab_msisdn").text());
+                 $("#username").val($("#tab_username").text());
+                $("#errors_div").val('');
+                $('#myModal').modal('show');
+            });
+
+            $(".remove_btn").click(function(){
+                var group_id = $(this).attr("value");
+                console.log("Group id is " + group_id);
+                $.post("/group/delete/",{"group_id": group_id, "csrfmiddlewaretoken": '{{csrf_token}}'}, function(data, status){
+                    alert("Successfully removed the group");
+                    $('#' + group_id).remove();
+                })
+
+                .fail(function(){
+                   alert("Error occurred while deleting group");
+                });
+
+            });
+
+            $("#add_group").click(function(){
+                console.log("inside add");
+                $("#modal_form").attr('action', '/group/');
+                $("#inputname").val('');
+                $("option:selected").removeAttr("selected");
+                $('select').val('');
+                $("#errors_div").html('');
+                $("#myModalLabel").text("Add Class");
+                $('#myModal').modal('show');
+            });
+
+            function get_html_group_data(list_data){
+                var htm = "";
+                for (i = 0; i < list_data.length; i++) {
+                    htm += "<a class='btn btn-info btn-sm org-show' role='button' style='margin:3px 3px 3px 3px;'>" + list_data[i] + "</a>";
+                };
+                return htm;
+            }
+
+            $(".member-show").click(function(){
+                console.log("inside member show");
+                var member_id = $(this).attr("value");
+                console.log(member_id);
+                console.log(member_data[member_id]);
+                console.log(member_data[member_id]['name']);
+                $("#inputmemberfirstname").val(member_data[member_id]['first_name']);
+                $("#inputmemberlastname").val(member_data[member_id]['last_name']);
+                $("#inputcity").val(member_data[member_id]['city']);
+                $("#inputrollno").val(member_data[member_id]['rollno']);
+                $("#modal_parent_data").html(get_html_group_data(member_data[member_id]['parents']));
+                $("#modal_organization_data").html(get_html_group_data(member_data[member_id]['organization']));
+                $('#myMemberModal').modal('show');
+            });
+
+            $(".teacher-show").click(function(){
+                console.log(" inside teacher show");
+                var teacher_id = $(this).attr("value");
+                console.log(teacher_data[teacher_id]);
+                $("#teacher_name").val(teacher_data[teacher_id]['name']);
+                $("#teacher_email").val(teacher_data[teacher_id]['email']);
+                $("#teacher_msisdn").val(teacher_data[teacher_id]['msisdn']);
+                $("#organization_data").html(get_html_group_data(teacher_data[teacher_id]['organization']));
+                $('#myTeacherModal').modal('show');
+            });
+        });
+    </script>
+    <script src="//netdna.bootstrapcdn.com/bootstrap/3.0.0-rc1/js/bootstrap.min.js"></script>
+    <script src="/static/js/file_upload.js"></script>
+
+{% endblock javascript%}
+
+{% block content %}
+ <div id="page-wrapper">
+            <div class="container-fluid">
+
+                <!-- Page Heading -->
+                <div class="row">
+                    <div class="col-lg-12">
+                        <h1 class="page-header">
+                            User Profile
+                        </h1>
+                        <ol class="breadcrumb">
+                            <li>
+                                <i class="fa fa-dashboard"></i>  <a href="/dashboard/">Dashboard</a>
+                            </li>
+                            <li class="active">
+                                <i class="/user_profile/"></i> Profile
+                            </li>
+                        </ol>
+                    </div>
+                </div>
+                {% if message %}
+                    <div class="alert alert-success">
+                     {{message}}
+                    </div>
+                {% endif %}
+                <div class="row">
+                    <div class="col-sm-12">
+                        <div class="col-sm-5">
+                            <div class="asideUserProfile">
+                            <!--<div class="userProfileInfo">-->
+                                    <div class="image">
+                                        <img src="/static/images/210.jpg" alt="#" class="img-responsive">
+                                    </div>
+                                    <!--<img src="/static/images/210.jpg" alt="Profile" class="img-responsive" width="225px;">-->
+                                </div>
+                            <form method="post" action="/avatar/" enctype="multipart/form-data">
+                                <div class="fileupload fileupload-new" data-provides="fileupload">
+                                    <span class="btn btn-success btn-file" style="border-top-right-radius: 0px;border-bottom-right-radius: 0px;"><span class="fileupload-new">Browse Photo</span>
+                                    <span class="fileupload-exists">Change</span>         <input type="file" name="file"/></span>
+                                    <span class="fileupload-preview"></span>
+                                    <a href="#" class="close fileupload-exists" data-dismiss="fileupload" style="float: none">×</a>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Change Photo</button>
+                            </form>
+                        </div>
+                        <div class="col-sm-7">
+                            <table class="table table-condensed" border="0">
+                                <tr>
+                                    <td>First Name</td>
+                                    <td id="tab_first_name">{{request.user.first_name}}</td>
+                                </tr>
+                                <tr>
+                                    <td>Last Name</td>
+                                    <td id="tab_last_name">{{request.user.last_name}}</td>
+                                </tr>
+                                <tr>
+                                    <td>Phone Number</td>
+                                    <td id="tab_msisdn">{{request.user.msisdn}}</td>
+                                </tr>
+                                <tr>
+                                    <td>Email</td>
+                                    <td id="tab_email">{{request.user.email}}</td>
+                                </tr>
+                                <tr>
+                                    <td>Username</td>
+                                    <td id="tab_username">{{request.user.username}}</td>
+                                </tr>
+                            </table>
+                            <button class="btn btn-primary pull-right edit_btn" id="{{request.user.id}}">Edit</button>
+                        </div>
+                    </div>
+                </div>
+
+            <!-- Modal -->
+<div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" >
+  <div class="modal-dialog" role="document" style="left:-5%;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title" id="myModalLabel">Edit User Info</h4>
+      </div>
+      <div class="modal-body">
+        <form class="form-horizontal" id="modal_form" method="post" action="/user_profile/">
+            {% csrf_token %}
+            <div id="abc">
+            {% if errors %}
+                <div id="error_messages"class="alert alert-danger">
+                    {% for error in errors %}
+                        <span>{{error}}</span>
+                    {% endfor %}
+                </div>
+            {% endif %}
+            </div>
+            <div class="form-group">
+                <label for="inputname" class="col-sm-2 control-label">First Name</label>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" name="first_name" id="first_name" placeholder="Name">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="inputname" class="col-sm-2 control-label">Last Name</label>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" name="last_name" id="last_name" placeholder="Name">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="inputcity" class="col-sm-2 control-label">Email</label>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" id="email" name="email" placeholder="Email">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="inputstate" class="col-sm-2 control-label">Phone Number</label>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" id="msisdn" name="msisdn" placeholder="State">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="inputaddress" class="col-sm-2 control-label">Username</label>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" name="address" id="username" placeholder="Address">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <div class="col-sm-offset-2 col-sm-10">
+                    <button type="submit" class="btn btn-primary">Submit</button>
+                </div>
+            </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary">Save changes</button>
+      </div>
+    </div>
+  </div>
+</div><!-- Modal -->
+
+            </div>
+            <!-- /.container-fluid -->
+
+        </div>
+        <!-- /#page-wrapper -->
+
+
+{% endblock content %}

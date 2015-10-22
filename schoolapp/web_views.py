@@ -21,7 +21,7 @@ from datetime import datetime, timedelta
 from models import TEACHER, PARENT, PRODUCT_TYPES
 from utils.helpers import get_groups, create_teacher, update_teacher, get_teacher_owner_group,\
     get_students, create_student, update_student, create_parent, update_parent, get_group_list, get_teacher_view_data, \
-    delete_teacher, get_parent_view_data, delete_parent, get_attendance_data, can_add_students, get_events_list, post_status, get_to_users
+    delete_teacher, get_parent_view_data, delete_parent, get_attendance_data, can_add_students, get_events_list, post_status, get_to_users, valid_msisdn, valid_email
 
 
 logger = log.Logger.get_logger(__file__)
@@ -597,6 +597,65 @@ class EventsView(View):
         status_list = get_events_list(request.user)
         return render(request, self.template_name, {"errors":errors, "message":message, "status_list":status_list})
 
+class ProfileView(View):
+    template_name = 'profile.html'
+
+    def get(self, request):
+        return render(request, self.template_name)
+
+    def post(self, request):
+        errors=[]
+        message=None
+        user = request.user
+        first_name = request.POST.get('first_name')
+        last_name = request.POST.get('last_name')
+        email = request.POST.get('email')
+        msisdn = request.POST.get('msisdn')
+
+        if not first_name or not last_name or not email or not msisdn:
+            errors.append("Please specify all the fields")
+
+        if not valid_msisdn(msisdn):
+            errors.append("Phone Number is not it valid format")
+
+        if not valid_email(email):
+            errors.append("Email is not it valid format")
+
+        if not errors:
+            user.first_name= first_name
+            user.last_name = last_name
+            user.msisdn=msisdn
+            user.email= email
+            user.save()
+            message="You have successfully updated the user info"
+        return render(request, self.template_name, {"errors":errors, "message":message})
+
+
+def AvatarView(View):
+    template_name = 'profile.html'
+
+    def post(self, request):
+        image_body=None
+        message = None
+        errors=[]
+        file = self.request.FILES.get('file')
+
+        if file:
+            image_body = file.read()
+
+        if not image_body:
+            errors.append("Please select the image")
+
+        if not errors:
+            try:
+                to_users = get_to_users(request.user)
+                status_obj = post_status(request.user, data=image_body, message='', to_users=to_users, profile_pic=True)
+            except Exception, ex:
+                logger.error("Error occurred while posting profile pic update: user_id: %s, error: %s" % (request.user.id, str(ex)))
+                errors.append("Error occurred while doing profile pic update")
+            else:
+                message="Profile Pic has been updated successfully"
+        return render(request, self.template_name, {"errors":errors, "message":message})
 
 
 
