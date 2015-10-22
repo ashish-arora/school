@@ -11,7 +11,7 @@ from django.contrib.auth import login, logout
 from mongoengine.django.auth import User
 from mongoengine.django.mongo_auth import models
 from mongoengine.queryset import DoesNotExist
-from schoolapp.models import Organization, Student, Group, CustomUser, Attendance, AttendanceSummary,ProductPlan
+from schoolapp.models import *
 import bson, base64, random, os
 BASE64_URLSAFE="-_"
 from schoolapp.utils import log
@@ -621,7 +621,7 @@ class ProfileView(View):
         return render(request, self.template_name, {"errors":errors, "message":message})
 
 
-def AvatarView(View):
+class AvatarView(View):
     template_name = 'profile.html'
 
     def post(self, request):
@@ -646,6 +646,58 @@ def AvatarView(View):
             else:
                 message="Profile Pic has been updated successfully"
         return render(request, self.template_name, {"errors":errors, "message":message})
+
+class SubjectsView(View):
+    template_name='subjects.html'
+
+    def get(self, request):
+        subjects = Subjects.objects.all(organization__in = request.user.organization)
+        return render(request, self.template_name, {"subjects": subjects})
+
+    def post(self, request, subject_id=None):
+        errors=[]
+        message=""
+        post_type='post'
+        if self.args:
+            subject_id=self.args[0]
+            post_type='update'
+        organization_id = request.POST.get('organization_id')
+        subject_name = request.POST.get('subject_name')
+        if not organization_id or not subject_name:
+            errors.append("Required Parameter is not there")
+        if not errors:
+            try:
+                if id:
+                    edit_subject(id=subject_id, name=subject_name, organization_id=organization_id)
+                else:
+                    create_subject(name=subject_name, organization_id=organization_id)
+            except Exception, ex:
+                logger.error("Error occurred while posting subjects: user_id: %s, error: %s" % (request.user.id, str(ex)))
+                errors.append("Error occurred while doing subjects update")
+        else:
+            message="Status has been posted successfully"
+        subjects = get_subjects_list(request.user)
+        return render(request, self.template_name, {"errors":errors, "message":message, "subjects": subjects})
+
+class SubjectsDeleteView(View):
+    template_name='subjects.html'
+
+    def get(self, request, subject_id):
+        errors=[]
+        message=None
+        if subject_id:
+            try:
+                delete_subject(subject_id)
+                message = "Subject has been successfully deleted"
+            except Exception, ex:
+                logger.error("Error occurred while subject deletion: %s" % id)
+                errors.append("Error occurred while subject deletion")
+        subjects = get_subjects_list(request.user)
+        subjects.update({"errors": errors, "message": message})
+        return render(request, self.template_name, subjects)
+
+
+
 
 
 

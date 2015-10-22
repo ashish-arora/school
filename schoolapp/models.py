@@ -80,6 +80,7 @@ class Group(Document):
     name = StringField(max_length=20)
     organization = ReferenceField(Organization)
     members = ListField(ReferenceField(Student))
+    subjects=ListField(ReferenceField('Subjects'))
     owner = ListField(ReferenceField(CustomUser))
 
     meta={
@@ -112,3 +113,8 @@ class ProductPlan(Document):
     name = StringField(required=True)
     duration_days = IntField(required=True) #duration_days = -1 represents life time plan
     features = DictField()                  #free_students = -1 represents unlimited addition of students
+
+
+class Subjects(Document):
+    name = StringField(required=True)
+    organization=ReferenceField(Organization)

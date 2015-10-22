@@ -20,6 +20,7 @@ from school.settings import STATUS_UPLOAD_STORE
 from school.settings import STATUS_UPDATE_QUEUE
 import os
 from school.settings import MEDIA_ROOT
+from schoolapp.models import *
 
 def authenticate_user(func):
     """
@@ -424,6 +425,28 @@ def can_add_student(organization):
         return True
     return False
 
+
+def get_subjects_list(user):
+    subjects = Subjects.objects.all(organization__in = user.organization)
+    return subjects
+
+
+def create_subject(name, organization_id):
+    organization = Organization.objects.get(id=organization_id)
+    Subjects.objects.create(name=name, organization=organization)
+    return
+
+def edit_subject(subject_id, name, organization_id):
+    organization = Organization.objects.get(id=organization_id)
+    subject = Subjects.objects.get(id=id)
+    subject.name=name
+    subject.organization=organization
+    subject.save()
+    return
+
+def delete_subject(subject_id):
+    subject = Subjects.objects.get(id=subject_id)
+    subject.delete()
 
 
 
