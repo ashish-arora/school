@@ -129,6 +129,7 @@ class GroupView(View):
         post_type='post'
         members=[]
         owners=[]
+        subjects=[]
         if self.args:
             id=self.args[0]
             post_type='update'
@@ -137,6 +138,7 @@ class GroupView(View):
             organization_id = request.POST.get('organization_id')
             member_ids = request.POST.getlist('member_id[]')
             owner_ids = request.POST.getlist('owner_id[]')
+            subject_ids = request.POST.getlist('subject_ids[]')
         except Exception, ex:
             logger.error("Error: %s" %(str(ex)))
             errors.append("Required parameter was not there")
@@ -150,6 +152,8 @@ class GroupView(View):
             members = Student.objects.filter(id__in=member_ids)
         if owner_ids:
             owners = User.objects.filter(id__in=owner_ids)
+        if subject_ids:
+            subjects = Subjects.objects.filter(id__in=subject_ids)
         try:
             organization = Organization.objects.get(id=organization_id)
         except Exception, ex:
@@ -173,12 +177,14 @@ class GroupView(View):
                     group.members=members
                 if owners:
                     group.owner = owners
+                if subjects:
+                    group.subjects = subjects
                 group.save()
                 message = "Group has been successfully updated"
         else:
             # to handle create request
             try:
-                group = Group.objects.create(name=name, organization=organization, members=members, owner=owners)
+                group = Group.objects.create(name=name, organization=organization, members=members, owner=owners, subjects=subjects)
             except Exception, ex:
                 request.POST.post_type = post_type
                 logger.error("Error occurred while creating group:%s" % str(ex))
@@ -687,7 +693,7 @@ class SubjectsDeleteView(View):
         message=None
         if subject_id:
             try:
-                delete_subject(subject_id)
+                delete_subject(request.user, subject_id)
                 message = "Subject has been successfully deleted"
             except Exception, ex:
                 logger.error("Error occurred while subject deletion: %s" % id)
@@ -695,6 +701,50 @@ class SubjectsDeleteView(View):
         subjects = get_subjects_list(request.user)
         subjects.update({"errors": errors, "message": message})
         return render(request, self.template_name, subjects)
+
+
+class HomeWorkView(View):
+    template_name='homework.html'
+
+    def get(self, request, group_id):
+        errors=[]
+        message=''
+        date = request.GET.get("date","")
+        if group_id:
+            try:
+                homework_list = get_homework(request.user, group_id, date=date)
+            except Exception, ex:
+                logger.error("Error occurred while getting homework error: %s" % str(ex))
+                errors.append("Error occurred while getting homework")
+        else:
+            errors.append("Please specify the group id")
+        homework_list.update({"errors": errors, "message": message})
+        return render(request, self.template_name, homework_list)
+
+    def post(self, request):
+        errors=[]
+        message=None
+        user = request.user
+        group_id = request.POST.get('group_id')
+        text = request.POST.get('text')
+        subject_id = request.POST.get('subject_id')
+
+        if not group_id or not text or not subject_id:
+            errors.append("Please specify all the fields")
+
+        if not errors:
+            try:
+                post_home_work(user, group_id, subject_id, text)
+                homework_list = get_homework(request.user, group_id)
+            except Exception, ex:
+                logger.error("Error occurred while posting homework error : %s" % str(ex))
+                errors.append("Error occurred while posting homework")
+            else:
+                message="Homwork has been successfully posted"
+        homework_list.update({"errors": errors, "message": message})
+        return render(request, self.template_name, homework_list)
+
+
 
 
 

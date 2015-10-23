@@ -9,7 +9,7 @@ import json
 import socket
 import gevent
 from gevent import monkey, greenlet
-from school.settings import NOTIFICATION_QUEUE,GCM_APIKEY,GCM_PROJECT_ID,GCM_QUEUE,SMS_QUEUE,smsgw_ssd_url,ssd_auth_key,ssd_sender_id
+from school.settings import ATTENDANCE_NOTIFICATION_QUEUE, HOMEWORK_NOTIFICATION_QUEUE, GCM_APIKEY,GCM_PROJECT_ID,GCM_QUEUE,SMS_QUEUE,smsgw_ssd_url,ssd_auth_key,ssd_sender_id
 from schoolapp.utils.jabber_client import JabberClient
 from gcm.gcm import GCM
 from models import CustomUser
@@ -37,8 +37,8 @@ signal.signal(signal.SIGTERM, shutdown)
 class QueueProcessor():
     @staticmethod
     def process(queue, data):
-        if queue == NOTIFICATION_QUEUE:
-            SendNotification.perform(data)
+        if queue == ATTENDANCE_NOTIFICATION_QUEUE:
+            AttendanceNotification.perform(data)
         elif queue == GCM_QUEUE:
             GcmPush.perform(data)
         else:
@@ -105,20 +105,42 @@ class QueueHandler(greenlet.Greenlet):
         self.running = False
         logging.error('stopped tid: ' + str(self.tid) + '  queue: ' + self.queue + '  qid: ' + str(self.qid))
 
-class SendNotification(object):
-    queue = NOTIFICATION_QUEUE
+class AttendanceNotification(object):
+    queue = ATTENDANCE_NOTIFICATION_QUEUE
 
     @staticmethod
-    def compose_message(name):
-        return "Your child %s is absent today" % name
+    def compose_message(name, is_present):
+        if is_present:
+            return "Your child %s is present today" % name
+        else:
+            return "Your child %s is absent today" % name
 
     @staticmethod
     def perform(data):
-        parent_id = data.get('id')
+        parent_msisdn = data.get('msisdn')
         student_name = data.get('name')
-        message = SendNotification.compose_message(student_name)
-        JabberClient().send_message(parent_id, message)
-        logging.debug("Message has been sent to parent_id: %s" % parent_id)
+        is_present=int(data.get('is_present'))
+        message = AttendanceNotification.compose_message(student_name, is_present)
+        GcmPush.perform({"msisdn": parent_msisdn, "message": message})
+        logging.debug("Message has been sent to parent number: %s" % parent_msisdn)
+
+
+class HomeWorkNotification(object):
+    queue = HOMEWORK_NOTIFICATION_QUEUE
+
+    @staticmethod
+    def compose_message(name, subject_name, homework):
+        return "%s homework: %s" %(subject_name, homework)
+
+    @staticmethod
+    def perform(data):
+        parent_msisdn = data.get('msisdn')
+        student_name = data.get('name')
+        subject_name = data.get('subject_name')
+        homework= data.get('homework')
+        message = HomeWorkNotification.compose_message(student_name, subject_name, homework)
+        GcmPush.perform({"msisdn": parent_msisdn, "message": message})
+        logging.debug("Homework has been sent to parent number: %s" % parent_msisdn)
 
 class GcmPush(object):
     queue = GCM_QUEUE
