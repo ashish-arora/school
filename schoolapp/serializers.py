@@ -1,6 +1,7 @@
 __author__ = 'ashish'
 from rest_framework_mongoengine.serializers import DocumentSerializer
-from schoolapp.models import Group, Organization, Attendance, CustomUser, Student
+from schoolapp.models import Group, Organization, Attendance, CustomUser, Student, AttendanceSummary, Subjects, Status
+from schoolapp.models import ProductPlan
 from rest_framework import serializers
 
 class GroupSerializer(DocumentSerializer):
@@ -41,3 +42,40 @@ class StudentSerializer(DocumentSerializer):
     class Meta:
         model=Student
         fields = ('first_name', 'roll_no', 'parents', 'group', 'organization')
+
+class UserDataSerializer(DocumentSerializer):
+
+    class Meta:
+        model=CustomUser
+
+class GroupDataSerializer(DocumentSerializer):
+    class Meta:
+        model = Group
+
+class OrganizationDataSerializer(DocumentSerializer):
+    class Meta:
+        model = Organization
+
+class AttendanceDataSerializer(DocumentSerializer):
+    class Meta:
+        model = Attendance
+
+class AttendanceSummaryDataSerializer(DocumentSerializer):
+    class Meta:
+        model = AttendanceSummary
+
+class SubjectsDataSerializer(DocumentSerializer):
+    class Meta:
+        model = Subjects
+
+class StatusDataSerializer(DocumentSerializer):
+    class Meta:
+        model = Status
+
+class ProductPlanDataSerializer(DocumentSerializer):
+    class Meta:
+        model=ProductPlan
+
+class StudentDataSerializer(DocumentSerializer):
+    class Meta:
+        model=Student

@@ -21,7 +21,8 @@ from utils.helpers import QueueRequests
 from school.settings import NOTIFICATION_QUEUE, SMS_QUEUE
 from rest_framework.views import APIView
 from schoolapp.serializers import GroupSerializer, UserSerializer, OrganizationSerializer, StudentSerializer
-from schoolapp.serializers import AttendanceSerializer, UserLoginSerializer
+from schoolapp.serializers import AttendanceSerializer, UserLoginSerializer, StudentDataSerializer, AttendanceDataSerializer
+from schoolapp.serializers import UserDataSerializer
 from schoolapp.utils.helpers import get_base64_decode, get_base64_encode
 from schoolapp.utils.helpers import create_parent, create_teacher, create_admin, create_student,delete_student, \
     post_status, get_to_users, get_status,is_plan_within_expiry,can_take_attendance
@@ -159,6 +160,24 @@ class AccountLogin(APIView):
                 result_dict[attendance.student.id]['att'] = {datetime.fromtimestamp(attendance.ts): attendance.present}
         return result_dict
 
+    def get_parent_login_data(self, user):
+        student_data=[]
+        attendance_data=[]
+        students = Student.objects.filter(parents=user)
+        if not students:
+            print "no students for this parent"
+            return {"child_data":[], "attendance_data":[]}
+
+        for student in students:
+            student_data.append(StudentDataSerializer(student).data)
+
+        attendances = Attendance.objects.filter(student__in=students)
+        for attendance in attendances:
+            attendance_data.append(AttendanceDataSerializer(attendances))
+
+        return {"child_data": student_data, "attendance_data": attendance_data}
+
+
 
     def show_groups(self, user):
         groups = Group.objects.filter(owner=user)
@@ -240,8 +259,10 @@ class AccountLogin(APIView):
             type = user.type
             if type == PARENT:
                 #show attendance
-                result_dict = self.show_attendance(user)
-                return JSONResponse({"user_profile":user_profile,"result":result_dict, "stat":"ok"}, status=status.HTTP_200_OK)
+                #result_dict = self.show_attendance(user)
+                result_dict = self.get_parent_login_data(user)
+                user_profile_data = UserDataSerializer(user).data
+                return JSONResponse({"user_profile":user_profile_data,"result":result_dict, "stat":"ok"}, status=status.HTTP_200_OK)
             elif type == TEACHER:
                 result_dict = self.show_groups(user)
                 return JSONResponse({"user_profile":user_profile,"result":result_dict, "stat":"ok"}, status=status.HTTP_200_OK)
