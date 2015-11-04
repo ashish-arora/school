@@ -114,7 +114,12 @@ class ProductPlan(Document):
     duration_days = IntField(required=True) #duration_days = -1 represents life time plan
     features = DictField()                  #free_students = -1 represents unlimited addition of students
 
-
 class Subjects(Document):
     name = StringField(required=True)
     organization=ReferenceField(Organization)
+
+class HomeWork(Document):
+    subject=ReferenceField(Subjects)
+    text=StringField(required=True)
+    ts=IntField(default=int(time.time()))
+    group=ReferenceField(Group)

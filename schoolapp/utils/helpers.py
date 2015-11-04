@@ -21,6 +21,7 @@ from school.settings import STATUS_UPDATE_QUEUE
 import os
 from school.settings import MEDIA_ROOT
 from schoolapp.models import *
+from school.settings import HOMEWORK_NOTIFICATION_QUEUE
 
 def authenticate_user(func):
     """
@@ -444,9 +445,36 @@ def edit_subject(subject_id, name, organization_id):
     subject.save()
     return
 
-def delete_subject(subject_id):
+def delete_subjects_from_classes(user, subject):
+    Group.objects(organization__in=user.organization).update(pull__subjects=subject)
+    return
+
+def delete_subject(user, subject_id):
     subject = Subjects.objects.get(id=subject_id)
+    Group.objects(organization__in=user.organization).update(pull__subjects=subject)
+    delete_subjects_from_classes(user, subject)
     subject.delete()
 
+def get_homework(user, group_id, date=None):
+    group = Group.objects.get(id=group_id)
+    subjects = Subjects.objects.filter(group=group)
+    if date:
+        date_obj = datetime.datetime.strptime(date, "%d/%m/%Y")
+    else:
+        date_obj = datetime.datetime.now()
+    today = date_obj.date()
+    next_day = today + datetime.timedelta(days=1)
+    start = int(time.mktime(today.timetuple()))
+    end = int(time.mktime(next_day.timetuple()))
+    homeworks = HomeWork.objects.filter(subject__in=subjects, group=group, ts__gte=start, ts_lte=end)
+    return homeworks
 
+def post_home_work(user, group_id, subject_id, home_work):
+    group = Group.objects.get(id=group_id)
+    subject = Subjects.objects.get(id=subject_id)
+    HomeWork.objects.create(subject=subject, group=group, text=home_work)
+    students = Student.objects.filter(group=group)
+    for student in students:
+        for parent in student.parents:
+            QueueRequests.enqueue(HOMEWORK_NOTIFICATION_QUEUE, {"msisdn":parent.msisdn, "subject_name": subject.name, "message": home_work})
 
