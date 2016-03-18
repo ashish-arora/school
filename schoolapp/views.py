@@ -18,11 +18,11 @@ from models import Attendance
 from datetime import datetime, timedelta
 from schoolapp.utils.helpers import authenticate_user
 from utils.helpers import QueueRequests
-from school.settings import NOTIFICATION_QUEUE, SMS_QUEUE
+from school.settings import ATTENDANCE_NOTIFICATION_QUEUE, SMS_QUEUE
 from rest_framework.views import APIView
 from schoolapp.serializers import GroupSerializer, UserSerializer, OrganizationSerializer, StudentSerializer
 from schoolapp.serializers import AttendanceSerializer, UserLoginSerializer, StudentDataSerializer, AttendanceDataSerializer
-from schoolapp.serializers import UserDataSerializer
+from schoolapp.serializers import UserDataSerializer, GroupDataSerializer, StudentDataSerializer
 from schoolapp.utils.helpers import get_base64_decode, get_base64_encode
 from schoolapp.utils.helpers import create_parent, create_teacher, create_admin, create_student,delete_student, \
     post_status, get_to_users, get_status,is_plan_within_expiry,can_take_attendance
@@ -80,11 +80,11 @@ class AccountSignUp(APIView):
               message: Bad Request
         """
         try:
-            name = request.data.get('name')
+            first_name = request.data.get('first_name')
+            last_name = request.data.get('last_name')
             msisdn = request.data.get('msisdn')
             roll_no = request.data.get('roll_no', '')
             type = int(request.data.get('type'))
-            parent_data = request.data.get('parent_data', '')
             organization_id = str(request.data.get('organization'))
             group_id = str(request.data.get('group'))
         except Exception, ex:
@@ -102,38 +102,32 @@ class AccountSignUp(APIView):
         elif not msisdn.isdigit() or not len(msisdn) == 10:
             raise ValidationError("Invalid country in msisdn: %s" % msisdn)
 
-        if parent_data:
-            try:
-                parent_data = json.loads(parent_data)
-            except Exception, ex:
-                raise ValidationError("Invalid parent data, cannot parse json")
-
         try:
-            group = Group.objects.get(id=get_base64_decode(str(group_id)))
+            group = Group.objects.get(id=str(group_id))
         except Exception, ex:
             raise ValidationError("Invalid group id")
 
         try:
-            organization_obj = Organization.objects.get(id=get_base64_decode(organization_id))
+            organization_obj = Organization.objects.get(id=organization_id)
         except DoesNotExist:
             raise ValidationError("Invalid organization id :%s" % organization_id)
 
-        token = base64.urlsafe_b64encode(os.urandom(8))
+        password = base64.urlsafe_b64encode(os.urandom(8))
 
         if int(type) == PARENT:
-            created_id = create_parent(name, msisdn, organization_obj, token, students=[])
+            created_id = create_parent(first_name, last_name, msisdn, organization_obj, password, msisdn, students=[])
         elif int(type) == TEACHER:
-            created_id = create_teacher(name, msisdn, organization_obj, token, groups=[group])
+            created_id = create_teacher(first_name, last_name, msisdn, organization_obj, password, msisdn, groups=[group])
         elif int(type) == ADMIN:
-            created_id = create_admin(name, msisdn, organization_obj, token)
+            created_id = create_admin(first_name, last_name, msisdn, organization_obj, password, msisdn)
         else:
             # create student will create the student record and add the student into the group, parents are optional
             if not roll_no:
                 raise ValidationError("Roll No is required")
-            created_id = create_student(name, roll_no, group)
+            created_id = create_student(first_name, last_name, roll_no, group)
         created_id = get_base64_encode(created_id)
         logger.debug("Successfully signed up for msisdn: %s" %(msisdn))
-        return JSONResponse({"stat": "ok", "token": token, "id": created_id})
+        return JSONResponse({"stat": "ok", "password": password, "id": created_id})
 
 class AccountLogin(APIView):
 
@@ -173,23 +167,22 @@ class AccountLogin(APIView):
 
         attendances = Attendance.objects.filter(student__in=students)
         for attendance in attendances:
-            attendance_data.append(AttendanceDataSerializer(attendances))
+            attendance_data.append(AttendanceDataSerializer(attendance))
 
         return {"child_data": student_data, "attendance_data": attendance_data}
-
-
 
     def show_groups(self, user):
         groups = Group.objects.filter(owner=user)
         group_list=[]
         for group in groups:
-            group_dict={'class_id':str(group.id),'class_name':group.name}
-            members=[]
+            #group_dict={'class_id':str(group.id),'class_name':group.name}
+            group_list.append(GroupDataSerializer(group).data)
+            """members=[]
             for student in group.members:
                 student_dict={"student_id":str(student.id), "first_name":student.first_name, "last_name":student.last_name,"roll_no":student.roll_no}
                 members.append(student_dict)
             group_dict.update({"members":members})
-            group_list.append(group_dict)
+            group_list.append(group_dict)"""
 
         result_dict={"class_data":group_list}
         return result_dict
@@ -232,9 +225,9 @@ class AccountLogin(APIView):
               message: Bad Request
         """
         try:
-            msisdn = request.data.get('msisdn')
-            token = request.data.get('token')
-            devices = request.data.get('devices')
+            username = request.data.get('username')
+            password = request.data.get('password')
+            devices = request.data.get('devices', {})
         except Exception, ex:
             logger.error("Error: %s" %(str(ex)))
             raise ValidationError("Required parameter were not there")
@@ -245,31 +238,36 @@ class AccountLogin(APIView):
             except Exception, ex:
                 raise ParseError("Invalid json data: %s" % devices)
         try:
-            user = CustomUser.objects.get(msisdn=msisdn, token=token)
+            user = CustomUser.objects.get(username=username)
+            if not user.check_password(password):
+                raise AuthenticationFailed("Invalid credentials,username:%s, password:%s" %(username, password))
         except Exception, ex:
-            raise AuthenticationFailed("Invalid credentials,msisdn:%s, token:%s, type:%s" %(msisdn, token))
+            raise AuthenticationFailed("Invalid credentials,username:%s, password:%s" %(username, password))
         try:
             user.devices = devices
             user.save()
         except Exception, ex:
-            logger.error("Error while updating device info: %s, msisdn:%s" % (devices, msisdn))
+            logger.error("Error while updating device info: %s, username:%s" % (devices, username))
             raise APIException("Error while saving data")
-        user_profile={"first_name":user.first_name,"last_name":user.last_name,"email":user.email,"type":user.type}
+        #user_profile={"first_name":user.first_name,"last_name":user.last_name,"email":user.email,"type":user.type}
         try:
             type = user.type
+            token = base64.urlsafe_b64encode(os.urandom(8))
+            user.token=token
+            user.save()
+            user_profile_data = UserDataSerializer(user).data
             if type == PARENT:
                 #show attendance
                 #result_dict = self.show_attendance(user)
                 result_dict = self.get_parent_login_data(user)
-                user_profile_data = UserDataSerializer(user).data
                 return JSONResponse({"user_profile":user_profile_data,"result":result_dict, "stat":"ok"}, status=status.HTTP_200_OK)
             elif type == TEACHER:
                 result_dict = self.show_groups(user)
-                return JSONResponse({"user_profile":user_profile,"result":result_dict, "stat":"ok"}, status=status.HTTP_200_OK)
+                return JSONResponse({"user_profile":user_profile_data,"result":result_dict, "stat":"ok"}, status=status.HTTP_200_OK)
             elif type == ADMIN:
                 #sending list of teachers objects
                 result_dict = self.show_teachers(user)
-                return JSONResponse({"user_profile":user_profile,"result":result_dict, "stat":"ok"}, status=status.HTTP_200_OK)
+                return JSONResponse({"user_profile":user_profile_data,"result":result_dict, "stat":"ok"}, status=status.HTTP_200_OK)
         except Exception, ex:
             logger.error("Error while getting info: %s" % str(ex))
             return JSONResponse({"stat":"fail", "errorMsg":"Error while getting information"})
@@ -437,7 +435,7 @@ class AttendanceView(APIView):
 
             attendance_objs.append(Attendance(student=student, present=int(is_present)))
             for parent_id in student.parents:
-                QueueRequests.enqueue(NOTIFICATION_QUEUE, {'id': parent_id, 'name': student.name})
+                QueueRequests.enqueue(ATTENDANCE_NOTIFICATION_QUEUE, {'id': parent_id, 'name': student.name})
 
         try:
             Attendance.objects.insert(attendance_objs)
@@ -533,10 +531,10 @@ class GroupView(APIView):
         try:
             groups = Group.objects.all()
         except Exception, ex:
-            logger.error("Error occurred while creating organization doc: %s, name: %s, country:%s, city: %s, state:%s, address:%s " % (str(ex), name, country, city, state, address))
+            logger.error("Error occurred while getting organization details:%s " % (str(ex)))
             raise APIException("Error while saving data")
         else:
-            serializer = GroupSerializer(groups, many=True)
+            serializer = GroupDataSerializer(groups, many=True)
             return JSONResponse(serializer.data, status=200)
 
 

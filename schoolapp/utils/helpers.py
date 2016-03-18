@@ -60,11 +60,14 @@ def get_base64_decode(bson_id):
 def get_base64_encode(object_id):
     return base64.b64encode(object_id.binary, BASE64_URLSAFE)
 
-def create_teacher(name, msisdn, organization, token, username, groups=[], email='', password=''):
+def create_teacher(first_name, last_name, msisdn, organization, password, username, groups=[], email=''):
     try:
-        user = CustomUser(first_name=name, last_name=name, msisdn=msisdn, type=TEACHER, organization=[organization], email=email, token=token, username=username)
+        user = CustomUser(first_name=first_name, last_name=last_name, msisdn=msisdn, type=TEACHER, organization=[organization], username=username)
         user.set_password(password)
+        if email:
+            user.email=email
         user.save()
+        logging.debug("created user")
         for group in groups:
             if user not in group.owner:
                 group.owner.append(user)
@@ -76,17 +79,19 @@ def create_teacher(name, msisdn, organization, token, username, groups=[], email
         #logging.debug("Update the teacher info: %s" %(user.id))
     #    return user.id
     except Exception, ex:
-        logging.error("Error occurred while creating/updating teacher, name: %s, msisdn:%s, error:%s" %(name, msisdn, str(ex)))
-        raise OperationError("Error occurred while creating/updating teacher, name: %s, msisdn:%s" %(name, msisdn))
+        logging.error("Error occurred while creating/updating teacher, name: %s, msisdn:%s, error:%s" %(first_name, msisdn, str(ex)))
+        raise OperationError("Error occurred while creating/updating teacher, name: %s, msisdn:%s" %(first_name, msisdn))
 
-def update_teacher(teacher, name, msisdn, organization, token='', type=TEACHER, groups=[], email='', password=''):
+def update_teacher(teacher, first_name, last_name, msisdn, organization, token='', type=TEACHER, groups=[], email='', password=''):
     try:
         if organization:
             teacher.organization=[organization]
         if token:
             teacher.token = token
-        if name:
-            teacher.first_name = name
+        if first_name:
+            teacher.first_name = first_name
+        if last_name:
+            teacher.first_name = last_name
         if email:
             teacher.email = email
         if password:
@@ -100,18 +105,22 @@ def update_teacher(teacher, name, msisdn, organization, token='', type=TEACHER, 
                 group.save()
         return teacher
     except Exception, ex:
-        logging.error("Error occurred while updating teacher, name: %s, msisdn:%s, error:%s" %(name, msisdn, str(ex)))
-        raise OperationError("Error occurred while updating teacher, name: %s, msisdn:%s" %(name, msisdn))
+        logging.error("Error occurred while updating teacher, name: %s, msisdn:%s, error:%s" %(first_name, msisdn, str(ex)))
+        raise OperationError("Error occurred while updating teacher, name: %s, msisdn:%s" %(first_name, msisdn))
 
-def create_parent(name, msisdn, organization, token, username, students=[], email='', password=''):
+def create_parent(first_name, last_name, msisdn, organization, password, username, students=[], email=''):
     try:
-       parent = CustomUser.objects.create(first_name=name, last_name=name, msisdn=msisdn, type=PARENT, organization=[organization], token=token, username=username)
+       parent = CustomUser(first_name=first_name, last_name=last_name, msisdn=msisdn, type=PARENT, organization=[organization], username=username)
+       parent.set_password(password)
+       if email:
+           parent.email=email
+       parent.save()
        if students:
            add_parent_to_student(parent, students)
        return parent.id
     except Exception, ex:
-        logging.error("Error occurred while creating parent, name: %s, msisdn:%s, error:%s" %(name, msisdn, str(ex)))
-        raise OperationError("Error occurred while creating parent, name: %s, msisdn:%s" %(name, msisdn))
+        logging.error("Error occurred while creating parent, name: %s, msisdn:%s, error:%s" %(first_name, msisdn, str(ex)))
+        raise OperationError("Error occurred while creating parent, name: %s, msisdn:%s" %(first_name, msisdn))
 
 
 def add_parent_to_student(parent, students=[]):
@@ -182,9 +191,9 @@ def update_student(student,first_name,last_name,roll_no, group, parents=[]):
         logging.error("Error occurred while updating student, first_name: %s ,last_name: %s, roll_no:%s, error:%s" %(first_name,last_name, roll_no, str(ex)))
         raise OperationError("Error occurred while updating student, first_name: %s ,last_name: %s, roll_no:%s" %(first_name,last_name, roll_no))
 
-def create_student(first_name,last_name, roll_no, group,organization, parents=[]):
+def create_student(first_name, last_name, roll_no, group,organization, parents=[]):
     try:
-        student = Student.objects.create(first_name=first_name,last_name=last_name, roll_no=roll_no, group=group,organization=organization)
+        student = Student.objects.create(first_name=first_name, last_name=last_name, roll_no=roll_no, group=group,organization=organization)
         for parent in parents:
             if parent not in student.parents:
                 student.parents.append(parent)
@@ -229,18 +238,20 @@ def remove_student_from_group(student, group):
         logging.error("Error occurred while removing student from group, student: %s, group:%s, error:%s" %(student.id, group.id, str(ex)))
         raise OperationError("Error occurred while removing student from group,student: %s, group:%s" %(student.id, group.id))
 
-def create_admin(name, msisdn, organization, token):
+def create_admin(first_name, last_name, msisdn, organization, password, username):
     try:
-        user = CustomUser.objects.create(name=name, msisdn=msisdn, type=ADMIN, organization=organization, token=token)
+        user = CustomUser(first_name=first_name, last_name=last_name, msisdn=msisdn, type=ADMIN, organization=organization, username=username)
+        user.set_password(password)
+        user.save()
         logging.debug("Created the admin: %s" % user.id)
         return user.id
     except NotUniqueError:
-        user = update_teacher(name, msisdn, organization, token, type=ADMIN)
+        user = update_teacher(first_name, last_name, msisdn, organization, password, type=ADMIN)
         logging.debug("Updated the teacher info: %s" %(user.id))
         return user.id
     except Exception, ex:
-        logging.error("Error occurred while creating/updating admin account, name: %s, msisdn:%s, error:%s" %(name, msisdn, str(ex)))
-        raise OperationError("Error occurred while creating/updating admin account, name: %s, msisdn:%s" %(name, msisdn))
+        logging.error("Error occurred while creating/updating admin account, name: %s, msisdn:%s, error:%s" %(first_name, msisdn, str(ex)))
+        raise OperationError("Error occurred while creating/updating admin account, name: %s, msisdn:%s" %(first_name, msisdn))
 
 
 def get_groups(user, organization):

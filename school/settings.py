@@ -79,7 +79,6 @@ CACHES = {
     'default': {
         'BACKEND': 'redis_cache.RedisCache',
         'LOCATION': 'localhost:6379',
-        #'LOCATION': '54.254.167.4:6379',
         'OPTIONS': {
             'DB': 1,
             'PASSWORD': '',
@@ -105,8 +104,6 @@ LOGGING = {
     },
 }
 
-
-#REDIS_CONN = redis.StrictRedis(host='54.254.167.4')
 
 REDIS_CONN = redis.StrictRedis()
 
@@ -179,15 +176,15 @@ GCM_APIKEY = "<api_key>"
 GCM_PROJECT_ID = "<gcm_project_id>"
 
 #### Sms host ####
-ssd_sender_id = 'SCCHAP'
+ssd_sender_id = ''
 smsgw_ssd_url = 'http://sms.ssdindia.com/api/sendhttp.php'
-ssd_auth_key = '9218AIpGhQJkUvJc55f57357'
+ssd_auth_key = ''
 
 amazon_s3_config={'staging':{'status_upload_store': 'status-staging-upload-store'}, 'prod': {'status_upload_store': 'status-prod-upload-store'}}
 
 
-AWS_ACCESS_KEY_ID = 'AKIAIKMAQXKFTMLDRSJA'
-AWS_SECRET_ACCESS_KEY = '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'
+AWS_ACCESS_KEY_ID = ''
+AWS_SECRET_ACCESS_KEY = ''
 S3_CONTENT_BUCKET = 'S3_CONTENT_BUCKET'
 #FILE_EXPIRY_TIME = int(604800)#7*24*3600
 #FILE_EXPIRY_DELTA = 2 #in hrs
