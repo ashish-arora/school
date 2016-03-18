@@ -232,14 +232,14 @@ class AccountLogin(APIView):
             if type == PARENT:
                 #show attendance
                 result_dict = self.show_attendance(user)
-                return JSONResponse({"result":result_dict, "stat":"ok"}, status=status.HTTP_200_OK)
+                return JSONResponse({"token":token,"result":result_dict, "stat":"ok"}, status=status.HTTP_200_OK)
             elif type == TEACHER:
                 result_dict = self.show_groups(user)
-                return JSONResponse({"result":result_dict, "stat":"ok"}, status=status.HTTP_200_OK)
+                return JSONResponse({"token":token,"result":result_dict, "stat":"ok"}, status=status.HTTP_200_OK)
             elif type == ADMIN:
                 #sending list of teachers objects
                 result_dict = self.show_teachers(user)
-                return JSONResponse({"result":result_dict, "stat":"ok"}, status=status.HTTP_200_OK)
+                return JSONResponse({"token":token,"result":result_dict, "stat":"ok"}, status=status.HTTP_200_OK)
         except Exception, ex:
             logger.error("Error while getting info: %s" % str(ex))
             return JSONResponse({"stat":"fail", "errorMsg":"Error while getting information"})
@@ -294,7 +294,7 @@ class AccountPinValidation(APIView):
     def post(self,request):
         try:
             msisdn = request.data.get('msisdn')
-            pincode = int(request.data.get('pin'))
+            pincode = int(request.data.get('pin','0'))
         except Exception, ex:
             logger.error("Parameters are not in correct format: %s" % str(ex))
             raise ValidationError("Parameters are not in correct format: %s" % str(ex))
@@ -565,4 +565,10 @@ class OrganizationView(APIView):
             serializer = OrganizationSerializer(organizations, many=True)
             return JSONResponse(serializer.data, status=200)
 
+class PingWebHandler(APIView):
 
+    def get(self,request):
+        return JSONResponse({'stat':'pong'})
+
+    def post(self,request):
+        return JSONResponse({'stat':'pong'})
